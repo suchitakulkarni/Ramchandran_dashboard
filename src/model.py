@@ -1,4 +1,4 @@
-import os
+import os, sys
 import numpy as np
 import pandas as pd
 import torch
@@ -8,6 +8,13 @@ from torch.utils.data import DataLoader, TensorDataset
 from sklearn.mixture import GaussianMixture
 from sklearn.preprocessing import MinMaxScaler
 import joblib
+from pathlib import Path
+
+if "PROJECT_ROOT" in os.environ:
+    root_path = Path(os.environ["PROJECT_ROOT"]).resolve()
+else:
+    # fallback: assume this file is somewhere inside src/
+    root_path = Path(__file__).resolve().parents[1]
 
 import src.config as config
 from utils.rama_grid import  RamaGrid, build_rama_grid
