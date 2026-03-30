@@ -7,6 +7,8 @@ else:
     # fallback: assume this file is somewhere inside src/
     root_path = Path(__file__).resolve().parents[1]
 
+PROJECT_ROOT = root_path
+
 # --- paths ---
 DATA_DIR    = PROJECT_ROOT / "data"
 MODEL_DIR   = PROJECT_ROOT / "models"
