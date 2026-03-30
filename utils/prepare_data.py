@@ -1,18 +1,19 @@
-import os
+import os, sys
 import warnings
 import pandas as pd
 from Bio.PDB import PDBList, PPBuilder, MMCIFParser
 
-from config import (
-    ORIGINAL_PDB_IDS, AUGMENTED_PDB_IDS,
-    PDB_DIR, CSV_ORIGINAL, CSV_AUGMENTED,
-    DATA_DIR
-)
+from pathlib import Path
+root_path = Path(os.environ["PROJECT_ROOT"])
+if str(root_path) not in sys.path:
+    sys.path.insert(0, str(root_path))
+
+import src.config as config
 
 warnings.filterwarnings("ignore")
 
-os.makedirs(PDB_DIR, exist_ok=True)
-os.makedirs(DATA_DIR, exist_ok=True)
+os.makedirs(config.PDB_DIR, exist_ok=True)
+os.makedirs(config.DATA_DIR, exist_ok=True)
 
 
 def download_pdb_files(pdb_ids, pdb_dir):
@@ -67,10 +68,10 @@ def extract_phi_psi(pdb_ids, pdb_dir):
 
 def build_dataset(pdb_ids, output_csv):
     print(f"\nDownloading {len(pdb_ids)} structures...")
-    download_pdb_files(pdb_ids, PDB_DIR)
+    download_pdb_files(pdb_ids, config.PDB_DIR)
 
     print("Extracting phi/psi angles...")
-    records = extract_phi_psi(pdb_ids, PDB_DIR)
+    records = extract_phi_psi(pdb_ids, config.PDB_DIR)
 
     df = pd.DataFrame(records)
     df.to_csv(output_csv, index=False)
@@ -81,10 +82,10 @@ def build_dataset(pdb_ids, output_csv):
 
 def main():
     print("=== Building original dataset ===")
-    build_dataset(ORIGINAL_PDB_IDS, CSV_ORIGINAL)
+    build_dataset(config.ORIGINAL_PDB_IDS, config.CSV_ORIGINAL)
 
     print("\n=== Building augmented dataset ===")
-    build_dataset(AUGMENTED_PDB_IDS, CSV_AUGMENTED)
+    build_dataset(config.AUGMENTED_PDB_IDS, config.CSV_AUGMENTED)
 
 
 if __name__ == "__main__":

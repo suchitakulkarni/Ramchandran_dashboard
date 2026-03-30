@@ -10,9 +10,11 @@ from sklearn.preprocessing import MinMaxScaler
 import joblib
 
 from pathlib import Path
-root_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-if root_path not in sys.path: sys.path.insert(0, root_path)
+root_path = Path(os.environ["PROJECT_ROOT"])
+if str(root_path) not in sys.path:
+    sys.path.insert(0, str(root_path))
 
+from utils.rama_grid import  RamaGrid, build_rama_grid
 from utils.utils import load_data, fit_gmm
 from src.model import build_torch_gmm, VAE, vae_base_loss, physics_penalty
 import src.config as config
@@ -125,7 +127,7 @@ def run_training(use_physics, angles_scaled, scaler, torch_gmm, save_path, exper
             )
 
     torch.save(model.state_dict(), save_path)
-    loss_path = os.path.join(config.RESULTS_DIR, f"loss_{experiment}_{variant}.csv")
+    loss_path = os.path.join(config.RESULTS_DIR, f"datafiles/loss_{experiment}_{variant}.csv")
     pd.DataFrame(history).to_csv(loss_path, index=False)
     return model
 
@@ -137,8 +139,9 @@ def main():
 
         print(f"\n=== Experiment: {experiment} ===")
         angles_scaled, scaler, angles_raw = load_data(csv_path, scaler_path)
-        gmm = fit_gmm(angles_raw, gmm_path)
-        torch_gmm = build_torch_gmm(gmm)
+        #gmm = fit_gmm(angles_raw, gmm_path)
+        #torch_gmm = build_torch_gmm(gmm)
+        torch_gmm = build_rama_grid()
 
         run_training(False, angles_scaled, scaler, torch_gmm, config.model_path(experiment, "baseline"), experiment)
         run_training(True, angles_scaled, scaler, torch_gmm, config.model_path(experiment, "physics"), experiment)

@@ -24,18 +24,19 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
-from scipy.stats import gaussian_kde
+from scipy.stats import gaussian_kde, mannwhitneyu
 
 from pathlib import Path
 
-root_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+root_path = Path(os.environ["PROJECT_ROOT"])
 
-if root_path not in sys.path: sys.path.insert(0, root_path)
+if str(root_path) not in sys.path:
+    sys.path.insert(0, str(root_path))
 
-import config
+import src.config as config
 from src.train_vae import VAE
-from ramachandran_regions import overlay_regions, compliance_lovell
-from utils import compute_entropy, effect_size_label, cohen_d
+from utils.ramachandran_regions import overlay_regions, compliance_lovell
+from utils.utils import compute_entropy, effect_size_label, cohen_d
 
 os.makedirs(config.RESULTS_DIR, exist_ok=True)
 os.makedirs(os.path.join(config.RESULTS_DIR,"plots"), exist_ok=True)
@@ -109,13 +110,13 @@ def plot_learning_curves(experiment):
     n_cols   = 4  # total | recon | kl | phys  (phys col empty for baseline)
 
     fig, axes = plt.subplots(2, n_cols, figsize=(18, 8))
-    fig.suptitle(
-        f"Stage 0: Learning Curves -- {experiment}", fontsize=13, fontweight="bold"
-    )
+    #fig.suptitle(
+    #    f"Stage 0: Learning Curves -- {experiment}", fontsize=13, fontweight="bold"
+    #)
 
     for row, variant in enumerate(variants):
         loss_path = os.path.join(
-            config.RESULTS_DIR, f"loss_{experiment}_{variant}.csv"
+            config.RESULTS_DIR, f"datafiles/loss_{experiment}_{variant}.csv"
         )
         if not os.path.exists(loss_path):
             for ax in axes[row]:
@@ -161,7 +162,7 @@ def plot_learning_curves(experiment):
             ax_phys.set_visible(False)
 
     plt.tight_layout()
-    savefig(fig, "stage0_{experiment}_learning_curves.png")
+    savefig(fig, f"stage0_{experiment}_learning_curves.png")
 
 
 # =============================================================================
@@ -170,9 +171,9 @@ def plot_learning_curves(experiment):
 
 def plot_training_data(experiment, df):
     fig = plt.figure(figsize=(16, 12))
-    fig.suptitle(
-        f"Stage 1: Training Data -- {experiment}", fontsize=13, fontweight="bold"
-    )
+    #fig.suptitle(
+    #    f"Stage 1: Training Data -- {experiment}", fontsize=13, fontweight="bold"
+    #)
     gs = gridspec.GridSpec(2, 3, figure=fig, hspace=0.4, wspace=0.4)
 
     pdb_ids   = df["pdb_id"].unique() if "pdb_id" in df.columns else ["all"]
@@ -248,7 +249,7 @@ def plot_training_data(experiment, df):
     ax6.set_title("Residues per structure")
 
     plt.tight_layout()
-    savefig(fig, "stage1_{experiment}_training_data.png")
+    savefig(fig, f"stage1_{experiment}_training_data.png")
 
 
 # =============================================================================
@@ -285,7 +286,7 @@ def plot_gmm_quality(experiment, df, gmm):
         overlay_regions(ax, show_legend=False)
         fig.colorbar(cf, ax=ax, label="probability density")
 
-    savefig(fig, "stage2_{experiment}_gmm_quality.png")
+    savefig(fig, f"stage2_{experiment}_gmm_quality.png")
 
 
 # =============================================================================
@@ -344,7 +345,7 @@ def plot_reconstruction(experiment, df, scaler, model_baseline, model_physics):
         ax.set_title(f"{label}: psi residuals  (std={psi_res.std():.2f})")
 
     plt.tight_layout()
-    savefig(fig, "stage3_{experiment}_reconstruction.png")
+    savefig(fig, f"stage3_{experiment}_reconstruction.png")
 
 
 # =============================================================================
@@ -390,7 +391,7 @@ def plot_generated_samples(experiment, df, scaler, model_baseline, model_physics
         )
         ax.legend(fontsize=7)
 
-    savefig(fig, "stage4_{experiment}_generated_samples.png")
+    savefig(fig, f"stage4_{experiment}_generated_samples.png")
 
 
 # =============================================================================
@@ -442,7 +443,7 @@ def plot_perturbation_scatter(experiment, df_samples):
                     fontsize=7, color=color)
 
     plt.tight_layout()
-    savefig(fig, "stage5_{experiment}_perturbation_scatter.png")
+    savefig(fig, f"stage5_{experiment}_perturbation_scatter.png")
 
 
 # =============================================================================
@@ -455,6 +456,7 @@ def plot_entropy_and_compliance(experiment, df_samples, df_compliance):
     Panel 2 : GMM compliance rate vs sigma  (data-dependent)
     Panel 3 : Lovell favoured and allowed rates vs sigma  (data-independent)
     """
+    print(f'plotting for experiment {experiment}')
     sub_s = df_samples[df_samples["experiment"] == experiment]
     sub_c = df_compliance[df_compliance["experiment"] == experiment]
 
@@ -565,7 +567,7 @@ def plot_entropy_and_compliance(experiment, df_samples, df_compliance):
     axes[2].legend(fontsize=8)
     axes[2].grid(True, alpha=0.3)
 
-    savefig(fig, "stage6_{experiment}_entropy_compliance.png")
+    savefig(fig, f"stage6_{experiment}_entropy_compliance.png")
 
 def run_stats():
 
@@ -598,8 +600,8 @@ def run_stats():
     in config for higher power.  With N < 10, results should be treated as
     exploratory only.
     """
-    samples_path    = os.path.join(config.RESULTS_DIR, "perturbation_samples.csv")
-    compliance_path = os.path.join(config.RESULTS_DIR, "perturbation_compliance.csv")
+    samples_path    = os.path.join(config.RESULTS_DIR,  "datafiles/perturbation_samples.csv")
+    compliance_path = os.path.join(config.RESULTS_DIR, "datafiles/perturbation_compliance.csv")
 
     if not os.path.exists(samples_path):
         print(
@@ -755,8 +757,8 @@ def run_stats():
     df_detail  = pd.DataFrame(rows_detail)
     df_summary = pd.DataFrame(rows_summary)
 
-    detail_path  = os.path.join(config.RESULTS_DIR, "physics_wins_stats.csv")
-    summary_path = os.path.join(config.RESULTS_DIR, "physics_wins_summary.csv")
+    detail_path  = os.path.join(config.RESULTS_DIR, "datafiles/physics_wins_stats.csv")
+    summary_path = os.path.join(config.RESULTS_DIR, "datafiles/physics_wins_summary.csv")
 
     df_detail.to_csv(detail_path,   index=False)
     df_summary.to_csv(summary_path, index=False)

@@ -8,7 +8,7 @@ from sklearn.preprocessing import MinMaxScaler
 from scipy.stats import mannwhitneyu
 import joblib
 
-import  src.config as config
+import src.config as config
 
 torch.manual_seed(config.SEED)
 np.random.seed(config.SEED)

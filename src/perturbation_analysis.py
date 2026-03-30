@@ -30,8 +30,9 @@ import torch
 import joblib
 
 from pathlib import Path
-root_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-if root_path not in sys.path: sys.path.insert(0, root_path)
+root_path = Path(os.environ["PROJECT_ROOT"])
+if str(root_path) not in sys.path:
+    sys.path.insert(0, str(root_path))
 
 import src.config as config
 from src.train_vae import VAE
@@ -154,12 +155,12 @@ def run_perturbation_analysis():
                 )
 
     # save long-form samples
-    samples_path = os.path.join(config.RESULTS_DIR, "perturbation_samples.csv")
+    samples_path = os.path.join(config.RESULTS_DIR, "datafiles/perturbation_samples.csv")
     pd.DataFrame(all_samples).to_csv(samples_path, index=False)
     print(f"\nSaved long-form samples -> {samples_path}")
 
     # save compliance summary
-    compliance_path = os.path.join(config.RESULTS_DIR, "perturbation_compliance.csv")
+    compliance_path = os.path.join(config.RESULTS_DIR, "datafiles/perturbation_compliance.csv")
     df_comp = pd.DataFrame(all_compliance)
     df_comp.to_csv(compliance_path, index=False)
     print(f"Saved compliance summary -> {compliance_path}")

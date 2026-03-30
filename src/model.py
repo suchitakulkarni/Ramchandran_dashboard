@@ -10,6 +10,8 @@ from sklearn.preprocessing import MinMaxScaler
 import joblib
 
 import src.config as config
+from utils.rama_grid import  RamaGrid, build_rama_grid
+
 
 torch.manual_seed(config.SEED)
 np.random.seed(config.SEED)

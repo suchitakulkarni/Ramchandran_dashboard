@@ -1,9 +1,13 @@
 import os
 
+from pathlib import Path
+
+PROJECT_ROOT = Path(os.environ["PROJECT_ROOT"])
+
 # --- paths ---
-DATA_DIR    = "data"
-MODEL_DIR   = "models"
-RESULTS_DIR = "results"
+DATA_DIR    = PROJECT_ROOT / "data"
+MODEL_DIR   = PROJECT_ROOT / "models"
+RESULTS_DIR = PROJECT_ROOT / "results"
 PDB_DIR     = os.path.join(DATA_DIR, "pdb_files")
 
 # --- data ---
@@ -63,7 +67,7 @@ GMM_COMPLIANCE_THRESHOLD = -5.0   # GMM log-prob cutoff for "allowed" region
 # KT: Boltzmann temperature parameter for physics constraint.
 # Lower = sharper penalty on implausible configurations.
 # Default: 1.0
-KT = 1
+KT = 5
 
 # --- VAE architecture ---
 LATENT_DIM  = 2
@@ -77,7 +81,8 @@ KL_WEIGHT  = 0.01
 
 # PHYSICS_WEIGHT: weight of the Boltzmann penalty term in the physics-constrained VAE loss.
 # Higher = stronger physics constraint. Default: 0.5
-PHYSICS_WEIGHT = 0.005 # 0.005
+#PHYSICS_WEIGHT = 0.005 # 0.005
+PHYSICS_WEIGHT = 0.05 # 0.005
 WARMUP_EPOCHS = 200
 SEED = 42
 

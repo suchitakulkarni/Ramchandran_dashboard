@@ -1,6 +1,6 @@
 experiment,metric,win_rate,mean_cohen_d,frac_p_lt_0.05,mean_delta,n_sigmas_tested
-original,phi_abs,0.833,0.905,0.667,,6
-original,psi_abs,0.167,-4.548,0.833,,6
-original,gmm_compliance,0.0,,,0.0,6
-original,lovell_favoured,0.5,,,0.0183,6
-original,lovell_allowed,0.167,,,-0.0067,6
+original,phi_abs,0.833,1.595,0.833,,6
+original,psi_abs,0.167,-4.365,0.667,,6
+original,gmm_compliance,0.667,,,0.0642,6
+original,lovell_favoured,0.667,,,0.0992,6
+original,lovell_allowed,0.5,,,0.045,6
