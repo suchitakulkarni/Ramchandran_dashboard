@@ -1,9 +1,16 @@
-import os
+import os, sys
 import numpy as np
 import pandas as pd
 from scipy.stats import gaussian_kde
 
 import config
+from pathlib import Path
+
+if "PROJECT_ROOT" in os.environ:
+    root_path = Path(os.environ["PROJECT_ROOT"]).resolve()
+else:
+    # fallback: assume this file is somewhere inside src/
+    root_path = Path(__file__).resolve().parents[1]
 
 os.makedirs(config.DATA_DIR, exist_ok=True)
 
