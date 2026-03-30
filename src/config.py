@@ -1,8 +1,11 @@
 import os
-
 from pathlib import Path
 
-PROJECT_ROOT = Path(os.environ["PROJECT_ROOT"])
+if "PROJECT_ROOT" in os.environ:
+    root_path = Path(os.environ["PROJECT_ROOT"]).resolve()
+else:
+    # fallback: assume this file is somewhere inside src/
+    root_path = Path(__file__).resolve().parents[1]
 
 # --- paths ---
 DATA_DIR    = PROJECT_ROOT / "data"
