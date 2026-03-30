@@ -54,18 +54,18 @@ COLORS = {
 # --- shared helpers ---
 
 def ramachandran_background(ax):
-    ax.axhline(0, color="lightgrey", linewidth=0.5)
-    ax.axvline(0, color="lightgrey", linewidth=0.5)
+    ax.axhline(0, color="lightgrey", linewidth=2)
+    ax.axvline(0, color="lightgrey", linewidth=2)
     ax.set_xlim(-180, 180)
     ax.set_ylim(-180, 180)
-    ax.set_xlabel("phi (degrees)")
-    ax.set_ylabel("psi (degrees)")
+    ax.set_xlabel(r"$\phi$ (degrees)")
+    ax.set_ylabel(r"$\psi$ (degrees)")
     ax.set_aspect("equal")
 
 
 def savefig(fig, filename):
     path = os.path.join(config.RESULTS_DIR, "plots", filename)
-    fig.savefig(path, dpi=150, bbox_inches="tight")
+    fig.savefig(path, bbox_inches="tight", dpi = 600)
     plt.close(fig)
     print(f"Saved {path}")
 
@@ -245,11 +245,52 @@ def plot_training_data(experiment, df):
         ax6.set_xlabel("PDB ID")
     else:
         ax6.bar(["all"], [len(df)], color=COLORS["data"])
-    ax6.set_ylabel("residue count")
+    ax6.set_ylabel("Residue count")
     ax6.set_title("Residues per structure")
 
     plt.tight_layout()
     savefig(fig, f"stage1_{experiment}_training_data.png")
+
+def plot_training_data_streamlit(experiment, df):
+    fig = plt.figure(figsize=(8, 4))
+    #gs = gridspec.GridSpec(1, 2, figure=fig, hspace=0.4, wspace=0.4)
+    gs = gridspec.GridSpec(1, 2, figure=fig, width_ratios=[1, 1])
+
+    pdb_ids   = df["pdb_id"].unique() if "pdb_id" in df.columns else ["all"]
+    cmap      = plt.cm.get_cmap("tab10", len(pdb_ids))
+    color_map = {pid: cmap(i) for i, pid in enumerate(pdb_ids)}
+
+    phi = df["phi"].values
+    psi = df["psi"].values
+
+    # Ramachandran scatter
+    ax1 = fig.add_subplot(gs[0, 0])
+    if "pdb_id" in df.columns:
+        for pid in pdb_ids:
+            sub = df[df["pdb_id"] == pid]
+            ax1.scatter(sub["phi"], sub["psi"], s=5, alpha=0.6,
+                        color=color_map[pid], label=pid)
+        ax1.legend(fontsize=10, markerscale=3)
+    else:
+        ax1.scatter(phi, psi, s=5, alpha=0.6, color=COLORS["data"])
+    ramachandran_background(ax1)
+    overlay_regions(ax1, show_legend=True)
+    ax1.set_title("Ramachandran plot")
+
+    # residues per PDB
+    ax6 = fig.add_subplot(gs[0, 1])
+    if "pdb_id" in df.columns:
+        counts = df["pdb_id"].value_counts()
+        ax6.bar(counts.index, counts.values,
+                color=[color_map[p] for p in counts.index])
+        ax6.set_xlabel("Protein ID")
+    else:
+        ax6.bar(["all"], [len(df)], color=COLORS["data"])
+    ax6.set_ylabel("Frequency")
+    ax6.set_title("Protein types in the training dataset")
+
+    plt.tight_layout()
+    savefig(fig, f"stage1_{experiment}_training_data_st.png")
 
 
 # =============================================================================
@@ -259,7 +300,7 @@ def plot_training_data(experiment, df):
 def plot_gmm_quality(experiment, df, gmm):
     fig, axes = plt.subplots(1, 2, figsize=(14, 6))
     fig.suptitle(
-        f"Stage 2: GMM Fit Quality -- {experiment}", fontsize=13, fontweight="bold"
+        f"GMM Fit Quality -- {experiment}", fontsize=13, fontweight="bold"
     )
 
     phi = df["phi"].values
@@ -300,7 +341,7 @@ def plot_reconstruction(experiment, df, scaler, model_baseline, model_physics):
 
     fig, axes = plt.subplots(2, 3, figsize=(16, 10))
     fig.suptitle(
-        f"Stage 3: Reconstruction Quality -- {experiment}", fontsize=13, fontweight="bold"
+        f"Reconstruction Quality -- {experiment}", fontsize=13, fontweight="bold"
     )
 
     for row, (model, label, color) in enumerate([
@@ -359,7 +400,7 @@ def plot_generated_samples(experiment, df, scaler, model_baseline, model_physics
 
     fig, axes = plt.subplots(1, 3, figsize=(18, 6))
     fig.suptitle(
-        f"Stage 4: Generated Samples from Prior -- {experiment}",
+        f"Generated Samples from Prior -- {experiment}",
         fontsize=13, fontweight="bold"
     )
 
@@ -414,7 +455,7 @@ def plot_perturbation_scatter(experiment, df_samples):
 
     fig, axes = plt.subplots(2, n_cols, figsize=(3 * n_cols, 7))
     fig.suptitle(
-        f"Stage 5: Perturbation Scatter -- {experiment}", fontsize=13, fontweight="bold"
+        f"Perturbation Scatter -- {experiment}", fontsize=13, fontweight="bold"
     )
 
     for row, variant in enumerate(variants):
@@ -429,8 +470,8 @@ def plot_perturbation_scatter(experiment, df_samples):
                             alpha_favoured=0.12, alpha_allowed=0.06)
             ax.set_title(f"{variant}\nsigma={sigma}", fontsize=8)
             if col == 0:
-                ax.set_ylabel("psi (degrees)", fontsize=7)
-            ax.set_xlabel("phi (degrees)", fontsize=7)
+                ax.set_ylabel(r"$\psi$ (degrees)", fontsize=7)
+            ax.set_xlabel(r"$\phi$ (degrees)", fontsize=7)
             ax.tick_params(labelsize=6)
 
             phi_s = pts["phi"].std()
@@ -468,7 +509,7 @@ def plot_entropy_and_compliance(experiment, df_samples, df_compliance):
 
     fig, axes = plt.subplots(1, 3, figsize=(20, 6))
     fig.suptitle(
-        f"Stage 6: Entropy Scaling and Compliance -- {experiment}",
+        f"Entropy Scaling and Compliance -- {experiment}",
         fontsize=13, fontweight="bold"
     )
 
@@ -836,6 +877,7 @@ def main():
 
         print("  Stage 1: training data")
         plot_training_data(experiment, df)
+        plot_training_data_streamlit(experiment, df)
 
         print("  Stage 2: GMM quality")
         plot_gmm_quality(experiment, df, gmm)

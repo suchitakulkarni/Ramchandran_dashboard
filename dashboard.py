@@ -33,9 +33,12 @@ root_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 
 if root_path not in sys.path: sys.path.insert(0, root_path)
 
+from utils.visualise import overlay_regions
 import src.config as config
 from src.train_vae import VAE
 from src.model import TorchGMM, build_torch_gmm
+from utils.rama_grid import  RamaGrid, build_and_save_rama_grid
+from utils.ramachandran_regions import compliance_lovell
 
 # ── page config ────────────────────────────────────────────────────────────────
 
@@ -82,7 +85,8 @@ def load_models_and_artifacts():
 
     scaler    = joblib.load(scaler_path)
     gmm       = joblib.load(gmm_path)
-    torch_gmm = build_torch_gmm(gmm)
+    #torch_gmm = build_torch_gmm(gmm)
+    torch_gmm = build_and_save_rama_grid(gmm_path)
 
     models = {}
     for variant in ("baseline", "physics"):
@@ -126,8 +130,7 @@ def run_perturbation(models, scaler, torch_gmm, sigma, n_samples):
         # Lovell compliance via pyrama if available
         lovell_favoured = lovell_allowed = None
         try:
-            from ramachandran_regions import lovell_compliance
-            lf, la = lovell_compliance(phi, psi)
+            lf, la = compliance_lovell(phi, psi)
             lovell_favoured = float(lf)
             lovell_allowed  = float(la)
         except Exception:
@@ -170,6 +173,8 @@ def ramachandran_scatter(results, title_suffix=""):
                 fontsize=7.5, va="top", family="monospace",
                 bbox=dict(boxstyle="round,pad=0.3", fc="white", alpha=0.8))
 
+        overlay_regions(ax, show_legend=True)
+
     fig.suptitle(f"Perturbation Samples -- {title_suffix}", fontsize=11,
                  fontweight="bold", y=1.01)
     fig.tight_layout()
@@ -178,7 +183,7 @@ def ramachandran_scatter(results, title_suffix=""):
 
 def png_or_message(path):
     if os.path.exists(path):
-        st.image(path, use_container_width=True)
+        st.image(path, width='stretch')
     else:
         st.info(f"File not found: `{path}`  \nRun the pipeline first.")
 
@@ -198,14 +203,17 @@ tab1, tab2, tab3, tab4 = st.tabs([
 # ─────────────────────────────────────────────────────────────────────────────
 
 with tab1:
-    st.title("Physics-Informed VAE for Protein Backbone Conformations")
+    st.title("Teaching Machines the Grammar of Proteins")
+    st.header("Can physics-informed generative models learn what data alone cannot?")
     st.markdown("""
-    This dashboard presents a comparison of a **standard VAE** (baseline) against a
-    **Boltzmann-penalised physics-informed VAE** for generating protein backbone
-    dihedral angles (phi, psi) consistent with known structural constraints.
+    Proteins fold into shapes governed by physics, not just statistics. Yet generative models 
+    treat protein structure as a pure data problem and fail in predictable ways.
 
-    Built as a demonstration for to illustrate understanding of
-    conformational sampling in enzyme space.
+    This dashboard asks a simple question: what happens when you build the physics in from the start?
+
+    We compare a standard data-driven generative model against a physics-informed approach on a concrete task: 
+    generating protein backbone conformations that respect known structural constraints. The results show
+    a measurable, statistically significant difference — and reveal exactly where and why data alone is not enough.
     """)
 
     st.markdown('<hr class="section-rule">', unsafe_allow_html=True)
@@ -215,8 +223,8 @@ with tab1:
     with col_text:
         st.markdown("""
         Every amino acid in a protein backbone has two rotatable bonds described
-        by dihedral angles **phi** and **psi**. Not all combinations are
-        sterically possible -- large regions of (phi, psi) space are forbidden
+        by dihedral angles **phi** and **psi**. Not all angle combinations are
+        possible -- large regions of (phi, psi) space are forbidden
         because atoms would clash.
 
         The **Ramachandran plot** maps these angles for a set of high-resolution
@@ -244,13 +252,13 @@ with tab1:
     cols = st.columns(len(proteins))
     for col, (pdb_id, name, description) in zip(cols, proteins):
         url = f"https://cdn.rcsb.org/images/structures/{pdb_id.lower()}_assembly-1.jpeg"
-        col.image(url, use_container_width=True)
+        col.image(url, width='stretch')
         col.markdown(f"**{pdb_id}** — {name}")
         col.caption(description)
 
     with col_img:
         stage1_path = os.path.join(
-            config.RESULTS_DIR, f"stage1_{EXPERIMENT}_training_data.png"
+            config.RESULTS_DIR, f"plots/stage1_{EXPERIMENT}_training_data_st.png"
         )
         png_or_message(stage1_path)
         st.caption("Training data distribution in Ramachandran space.")
@@ -262,23 +270,33 @@ with tab1:
     with col_a:
         st.markdown("**GMM Energy Landscape**")
         st.markdown("""
-        A Gaussian Mixture Model fitted to training data defines an
-        energy landscape via its log-probability. High log-prob = low energy
-        = physically favourable region.
+        We use the Richardson Lab Top500 reference density (Lovell et al. 2003), general case
+        (non-Gly, non-Pro, non-pre-Pro), B-factor < 30, available via pyrama v2.0.2 which ships
+        the pre-computed density grid directly. The Ramachandran energy landscape is defined via
+        the log-probability of this density, accessed through bilinear interpolation at decoded
+        (phi, psi) coordinates. High log-prob = low energy = physically favourable region.
         """)
     with col_b:
         st.markdown("**Differentiable Physics Penalty**")
-        st.markdown("""
+        latext = r'''
+        $$ 
+        \mathcal{L}_{physics}​= \frac{1}{N}\sum clip(−logpTop500​(\phi_i​,\psi_i​), 0, C)
+        $$ 
+        
+        $KT$ is a hyperparameter and $C$ is a hyperparameter for gradient clipping 
+        '''
+        st.markdown(
+        """
         The GMM is reimplemented in PyTorch so the gradient flows end-to-end
         through the decoder. The penalty is the mean clamped negative
         log-probability of decoded samples under the GMM.
         """)
+        st.write(latext)
     with col_c:
-        st.markdown("**Independent Validation**")
+        st.markdown("**Validation**")
         st.markdown("""
         Compliance is evaluated against **Lovell et al. (2003) Top500**
-        favoured/allowed region boundaries -- completely independent of the
-        training data -- providing an unbiased physical plausibility score.
+        favoured/allowed region boundaries providing an unbiased physical plausibility score.
         """)
 
     st.markdown('<hr class="section-rule">', unsafe_allow_html=True)
@@ -288,8 +306,9 @@ with tab1:
     |---------|--------|
     | Physics VAE phi stability | **100% win rate**, Cohen's d = 0.905 (large effect) |
     | Physics VAE psi behaviour | Destabilised -- anisotropic landscape effect |
+    | GMM fitting to trainiing data | Anchors the physics prior to data, leads to bias in generation |
     | Lovell allowed compliance | **95%** on original data |
-    | Posterior collapse | Observed in baseline; physics penalty partially resists |
+    | Posterior collapse | Observed in physics inspired approach, better tuning is needed|
     | GMM oversampling | Harmful -- generates density in sterically forbidden voids |
 
     The asymmetric phi/psi result is a genuine physical observation: phi is
@@ -305,23 +324,52 @@ with tab1:
 
 with tab2:
     st.header("Training Results")
+    st.markdown("""
+    This tab contains four plots corresponding to the four stages of the 
+    training and validation cycle.
+
+    The first plot shows contour levels of the Top500 Ramachandran reference 
+    density (Richardson Lab, Lovell et al. 2003). Darker colors correspond to 
+    higher probability of occurrence in nature. The overlaid training data shows 
+    a slight shift to larger phi angles in the lower cluster, demonstrating the 
+    dataset-specific bias that a purely data-driven method would inherit.
+
+    The second plot shows the loss curves during training and validation.
+
+    The third plot shows the capability of the trained models to reconstruct 
+    the training data. The data-driven baseline achieves smaller coordinate 
+    residuals (phi std=12.55 deg, psi std=11.72 deg) but 11% of reconstructed 
+    points fall outside the Lovell favoured region and 6% are outside the 
+    allowed region. The physics-informed model stays entirely within the Lovell 
+    allowed region (favoured=1.00, allowed=1.00), at the cost of larger 
+    coordinate residuals (phi std=45.07 deg, psi std=30.20 deg). This tradeoff 
+    reflects the model prioritising physical validity over positional fidelity.
+
+    The fourth plot shows generated samples, new predicted backbone 
+    conformations corresponding to plausible protein structures. The 
+    data-driven baseline places 25% of generated points outside the Lovell 
+    favoured region and 15% outside the allowed region. The physics-informed 
+    model generates 0% outliers under both Lovell criteria. 
+    """)
     st.caption("All plots are pre-computed. Re-run `train_vae.py` to regenerate.")
 
-    st.subheader("Learning Curves")
+    st.subheader("GMM Energy Landscape")
     png_or_message(
-        os.path.join(config.RESULTS_DIR, f"stage0_{EXPERIMENT}_learning_curves.png")
+        os.path.join(config.RESULTS_DIR, f"plots/stage2_{EXPERIMENT}_gmm_quality.png")
     )
 
     st.markdown('<hr class="section-rule">', unsafe_allow_html=True)
-    st.subheader("GMM Energy Landscape")
+
+    st.subheader("Learning Curves")
     png_or_message(
-        os.path.join(config.RESULTS_DIR, f"stage2_{EXPERIMENT}_gmm_quality.png")
+        os.path.join(config.RESULTS_DIR, f"plots/stage0_{EXPERIMENT}_learning_curves.png")
     )
+
 
     st.markdown('<hr class="section-rule">', unsafe_allow_html=True)
     st.subheader("Reconstruction Quality")
     png_or_message(
-        os.path.join(config.RESULTS_DIR, f"stage3_{EXPERIMENT}_reconstruction.png")
+        os.path.join(config.RESULTS_DIR, f"plots/stage3_{EXPERIMENT}_reconstruction.png")
     )
 
     st.markdown('<hr class="section-rule">', unsafe_allow_html=True)
@@ -331,7 +379,7 @@ with tab2:
     independent of the training data.
     """)
     png_or_message(
-        os.path.join(config.RESULTS_DIR, f"stage4_{EXPERIMENT}_generated_samples.png")
+        os.path.join(config.RESULTS_DIR, f"plots/stage4_{EXPERIMENT}_generated_samples.png")
     )
 
 
@@ -395,6 +443,7 @@ with tab3:
                     sigma     = sigma,
                     n_samples = n_samples,
                 )
+                
 
             # compliance metric cards
             st.markdown('<hr class="section-rule">', unsafe_allow_html=True)
@@ -566,7 +615,7 @@ with tab4:
         comp_display["Mean delta"] = comp_display["Mean delta"].apply(
             lambda x: f"+{x:.4f}" if x >= 0 else f"{x:.4f}"
         )
-        st.dataframe(comp_display, use_container_width=True, hide_index=True)
+        st.dataframe(comp_display, width='stretch', hide_index=True)
 
         st.markdown('<hr class="section-rule">', unsafe_allow_html=True)
 
@@ -574,7 +623,7 @@ with tab4:
         if df_det is not None:
             with st.expander("Per-sigma detail table"):
                 df_det_orig = df_det[df_det["experiment"] == EXPERIMENT].copy()
-                st.dataframe(df_det_orig, use_container_width=True, hide_index=True)
+                st.dataframe(df_det_orig, width='stretch', hide_index=True)
 
         # ── plain-language summary ─────────────────────────────────────────
         st.markdown('<hr class="section-rule">', unsafe_allow_html=True)
