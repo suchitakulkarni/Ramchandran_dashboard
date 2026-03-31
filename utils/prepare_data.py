@@ -4,7 +4,6 @@ import pandas as pd
 from Bio.PDB import PDBList, PPBuilder, MMCIFParser
 
 from pathlib import Path
-from pathlib import Path
 
 if "PROJECT_ROOT" in os.environ:
     root_path = Path(os.environ["PROJECT_ROOT"]).resolve()

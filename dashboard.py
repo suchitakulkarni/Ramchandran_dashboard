@@ -562,6 +562,12 @@ with tab4:
         df_dist = df_sum[~df_sum["metric"].isin(compliance_metrics)]
         df_comp = df_sum[ df_sum["metric"].isin(compliance_metrics)]
 
+    
+        stage1_path = os.path.join(
+            config.RESULTS_DIR, f"plots/cohen_d_explanation.png"
+        )
+        png_or_message(stage1_path)
+        st.caption("Training data distribution in Ramachandran space.")
         # ── distributional summary ─────────────────────────────────────────
         st.subheader("Distributional Metrics (phi, psi)")
         st.markdown("""
