@@ -190,11 +190,12 @@ def png_or_message(path):
 
 # ── tabs ───────────────────────────────────────────────────────────────────────
 
-tab1, tab2, tab3, tab4 = st.tabs([
+tab1, tab2, tab3, tab4, tab5 = st.tabs([
     "Introduction",
     "Training Results",
     "Live Perturbation",
     "Statistics",
+    "Future developments"
 ])
 
 
@@ -669,32 +670,53 @@ with tab4:
 # ─────────────────────────────────────────────────────────────────────────────
 
 with tab5:
-    st.subheader("Plain-language summary")
+    st.subheader("Future developments")
 
-    st.markdown("""
-    **phi angle (steric constraint)**
-    The physics VAE produces significantly tighter phi distributions under
-    perturbation -- 100% win rate across sigma levels with a large effect size
-    (Cohen's d = 0.905, 83% of tests p < 0.05). The physics penalty
-    effectively anchors the backbone's primary steric degree of freedom.
+    st.markdown(""" **Physics prior improvements**
+    The most immediate next step is temperature scaling at inference time, 
+    applying T greater than 1 to the learned energy landscape at generation 
+    to encourage exploration of low-density but physically valid regions 
+    without retraining. This directly addresses the mode collapse and the failure
+    to populate the small Lovell islands. Separately, replacing the Top500 reference
+    density with a CMAP-based first-principles torsional potential would make 
+    the physics constraint genuinely physics-derived rather than empirically grounded. 
+    This requires residue-type labels and selective application, only to residues 
+    where the alanine dipeptide approximation is valid, and does not fix the generative bias
+    without the architectural change described below.
+    
 
-    **psi angle (hydrogen-bond constraint)**
-    The physics VAE destabilises psi relative to baseline. This is an
-    anisotropic landscape effect: the Ramachandran energy gradient is steeper
-    in phi than psi, so the joint penalty is dominated by phi.
-    The decoder compensates by using psi as a high-variance residual channel
-    to minimise reconstruction loss. Decoupled per-angle penalties are the
-    direct fix.
+    **Architecture**
+    Moving to a conditional VAE where residue type is an explicit decoder input would make 
+    the generative distribution residue-type-aware, fixing the structural bias that CMAP 
+    introduces into generation. This is the prerequisite for using first-principles constraints correctly. 
+    Separately, replacing the standard Gaussian prior with a GMM prior in latent space would encourage 
+    multimodal latent structure that mirrors the multimodal Ramachandran landscape, potentially addressing 
+    mode collapse at a more fundamental level than temperature scaling
 
-    **Compliance**
-    GMM compliance is unchanged (by construction -- the penalty is the GMM
-    energy, so both models learn to stay inside it). Lovell compliance is
-    negative for the same reason as psi instability. The 95% allowed rate
-    reported for the full generated sample set is the headline number.
+    **Network tuning**
+    The current results are from an untuned network. A systematic hyperparameter sweep covering latent dimension, 
+    beta annealing schedule, physics loss weight, and learning rate would establish whether the performance gap 
+    between baseline and physics VAE holds under fair comparison conditions. The Lovell compliance gap is large 
+    enough that tuning is unlikely to close it entirely, but the reconstruction residual gap should be characterised 
+    under tuned conditions before making strong claims.
 
-    **Conclusion**
-    Physics regularisation demonstrably improves conformational stability
-    for the sterically-dominated degree of freedom. The asymmetric result
-    is a mechanistic finding, not a failure -- it motivates the next
-    iteration of the model.
+    **Evaluation and robustness certificate**
+    The small Lovell island population check, whether the physics VAE ever generates samples in 
+    the left-handed helix and minor beta regions, is the single most drug-discovery-relevant experiment remaining. 
+    Running a latent space grid search rather than random sampling would reveal whether these regions exist 
+    anywhere in the learned latent space. The robustness certificate should be extended to report a single 
+    robustness radius per generated structure, defined as the sigma at which Lovell compliance first degrades, 
+    as a scalar summary suitable for lab decision making.
+
+    **Dataset and generalisation**
+    Training on a more structurally diverse dataset that better represents all five Lovell islands would separate 
+    the data bias contribution from the physics constraint contribution in the results, directly addressing 
+    the strongest skeptical critique. This does not require the Top500 PDB pipeline but rather deliberate 
+    curation of structures representing each island rather than adding more helical proteins.
+
+    **Comparison with SOTA**
+    A direct comparison with a diffusion or flow matching baseline under the same evaluation framework, 
+    covering Lovell compliance, robustness radius, and small island population rate, would position 
+    the methodological contribution cleanly relative to current architecture trends and show that 
+    the physics prior question is architecture-agnostic.
     """)
