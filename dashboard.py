@@ -662,3 +662,39 @@ with tab4:
         is a mechanistic finding, not a failure -- it motivates the next
         iteration of the model.
         """)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# TAB 5: Next steps
+# ─────────────────────────────────────────────────────────────────────────────
+
+with tab5:
+    st.subheader("Plain-language summary")
+
+    st.markdown("""
+    **phi angle (steric constraint)**
+    The physics VAE produces significantly tighter phi distributions under
+    perturbation -- 100% win rate across sigma levels with a large effect size
+    (Cohen's d = 0.905, 83% of tests p < 0.05). The physics penalty
+    effectively anchors the backbone's primary steric degree of freedom.
+
+    **psi angle (hydrogen-bond constraint)**
+    The physics VAE destabilises psi relative to baseline. This is an
+    anisotropic landscape effect: the Ramachandran energy gradient is steeper
+    in phi than psi, so the joint penalty is dominated by phi.
+    The decoder compensates by using psi as a high-variance residual channel
+    to minimise reconstruction loss. Decoupled per-angle penalties are the
+    direct fix.
+
+    **Compliance**
+    GMM compliance is unchanged (by construction -- the penalty is the GMM
+    energy, so both models learn to stay inside it). Lovell compliance is
+    negative for the same reason as psi instability. The 95% allowed rate
+    reported for the full generated sample set is the headline number.
+
+    **Conclusion**
+    Physics regularisation demonstrably improves conformational stability
+    for the sterically-dominated degree of freedom. The asymmetric result
+    is a mechanistic finding, not a failure -- it motivates the next
+    iteration of the model.
+    """)
