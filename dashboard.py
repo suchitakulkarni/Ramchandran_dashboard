@@ -529,7 +529,7 @@ with tab3:
 # ─────────────────────────────────────────────────────────────────────────────
 
 with tab4:
-    st.header("Statistical Summary")
+    st.header("Statistical Summary (from offline results)")
     st.caption(
         "Tests run per sigma level from `perturbation_samples.csv`. "
         "Run `win_plots.py` to regenerate."
