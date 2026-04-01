@@ -25,6 +25,7 @@ import matplotlib.gridspec as gridspec
 import matplotlib.patches as mpatches
 from scipy.stats import mannwhitneyu
 
+
 from pathlib import Path
 
 if "PROJECT_ROOT" in os.environ:
@@ -37,6 +38,8 @@ if str(root_path) not in sys.path:
     sys.path.insert(0, str(root_path))
 
 import src.config as config
+from utils.visualise import savefig
+from utils.utils import cohen_d
 
 # color palette consistent with existing plots
 C_BASELINE = "#4C9BE8"
@@ -46,15 +49,18 @@ C_LOSE     = "#C0392B"
 C_ZERO     = "#AAAAAA"
 
 
-def cohen_d(a, b):
-    pooled_std = np.sqrt((np.std(a, ddof=1) ** 2 + np.std(b, ddof=1) ** 2) / 2.0)
-    if pooled_std == 0:
-        return 0.0
-    return (np.mean(a) - np.mean(b)) / pooled_std
+#def cohen_d(a, b):
+#    pooled_std = np.sqrt((np.std(a, ddof=1) ** 2 + np.std(b, ddof=1) ** 2) / 2.0)
+#    if pooled_std == 0:
+#        return 0.0
+#    return (np.mean(a) - np.mean(b)) / pooled_std
 
 
-def plot_cohen_d_explanation(samples_path: str, out_path: str) -> None:
-    df = pd.read_csv(samples_path)
+def plot_cohen_d_explanation(experiment, samples_path: str) -> None:
+    #df = pd.read_csv(samples_path)
+
+    df_s = pd.read_csv(samples_path)
+    df = df_s[df_s["experiment"] == experiment]
 
     sigmas   = sorted(df["sigma"].unique())
     n_sigmas = len(sigmas)
@@ -138,9 +144,6 @@ def plot_cohen_d_explanation(samples_path: str, out_path: str) -> None:
         patch_p = mpatches.Patch(color=C_PHYSICS,  alpha=0.7, label="physics")
         ax.legend(handles=[patch_b, patch_p], fontsize=15, loc="upper left")
 
-    # bottom row: Cohen d bar chart across sigmas
-    '''ax_d = fig.add_subplot(gs[1, :])
-
     x     = np.arange(n_sigmas)
     width = 0.35
 
@@ -155,92 +158,15 @@ def plot_cohen_d_explanation(samples_path: str, out_path: str) -> None:
         p_psi  = sub[sub["variant"] == "physics"]["psi"].abs().values
         d_phi.append(cohen_d(b_phi, p_phi))
         d_psi.append(cohen_d(b_psi, p_psi))
+        print(f"sigma={sigma}: n_baseline={len(b_phi)}, n_physics={len(p_phi)}, "
+        f"mean_baseline={np.mean(b_phi):.3f}, mean_physics={np.mean(p_phi):.3f}, "
+        f"d={cohen_d(b_phi, p_phi):.3f}")
 
     d_phi = np.array(d_phi)
     d_psi = np.array(d_psi)
 
     def bar_colors(d_arr, base_win, base_lose):
         return [base_win if v > 0 else base_lose for v in d_arr]
-
-    bars_phi = ax_d.bar(
-        x - width / 2, d_phi, width,
-        color=bar_colors(d_phi, C_WIN, C_LOSE),
-        alpha=0.85, label="phi_abs"
-    )
-    bars_psi = ax_d.bar(
-        x + width / 2, d_psi, width,
-        color=bar_colors(d_psi, C_WIN, C_LOSE),
-        alpha=0.55, label="psi_abs"
-    )
-
-    # value labels on bars
-    for bar in bars_phi:
-        h = bar.get_height()
-        ax_d.text(
-            bar.get_x() + bar.get_width() / 2,
-            h + (0.1 if h >= 0 else -0.25),
-            f"{h:.2f}", ha="center", va="bottom", fontsize=12
-        )
-    for bar in bars_psi:
-        h = bar.get_height()
-        ax_d.text(
-            bar.get_x() + bar.get_width() / 2,
-            h + (0.1 if h >= 0 else -0.25),
-            f"{h:.2f}", ha="center", va="bottom", fontsize=12
-        )
-
-    ax_d.axhline(0, color="black", linewidth=0.8, linestyle="--")
-
-    # reference lines for effect size thresholds
-    for thresh, label in [(0.2, "small"), (0.5, "medium"), (0.8, "large")]:
-        ax_d.axhline( thresh, color=C_ZERO, linewidth=0.6, linestyle=":")
-        ax_d.axhline(-thresh, color=C_ZERO, linewidth=0.6, linestyle=":")
-        ax_d.text(n_sigmas - 0.5, thresh + 0.05, label, fontsize=12,
-                  color=C_ZERO, ha="right")
-
-    ax_d.set_xticks(x)
-    ax_d.set_xticklabels([f"{s:.2g}" for s in sigmas], fontsize=15)
-    ax_d.tick_params(labelsize = 15)
-    ax_d.set_xlabel("perturbation sigma", fontsize=15)
-    ax_d.set_ylabel("Cohen d\n(positive = physics lower = physics wins)", fontsize=15)
-    ax_d.set_title(
-        "Cohen d per sigma -- positive bars: physics wins (tighter)   "
-        "negative bars: physics loses (more dispersed)\n"
-        "solid = phi_abs   faded = psi_abs",
-        fontsize=15
-    )
-    ax_d.grid(axis="y", alpha=0.3)
-
-    win_patch  = mpatches.Patch(color=C_WIN,  alpha=0.85, label="physics wins (d > 0)")
-    lose_patch = mpatches.Patch(color=C_LOSE, alpha=0.85, label="physics loses (d < 0)")
-    phi_patch  = mpatches.Patch(color="gray", alpha=0.85, label="phi_abs (solid)")
-    psi_patch  = mpatches.Patch(color="gray", alpha=0.55, label="psi_abs (faded)")
-    ax_d.legend(
-        handles=[win_patch, lose_patch, phi_patch, psi_patch],
-        fontsize=15, loc="lower right", ncol=2
-    )'''
-
-    x     = np.arange(n_sigmas)
-    width = 0.35
-
-    d_phi = []
-    d_psi = []
-
-    for sigma in sigmas:
-        sub    = df[df["sigma"] == sigma]
-        b_phi  = sub[sub["variant"] == "baseline"]["phi"].abs().values
-        p_phi  = sub[sub["variant"] == "physics"]["phi"].abs().values
-        b_psi  = sub[sub["variant"] == "baseline"]["psi"].abs().values
-        p_psi  = sub[sub["variant"] == "physics"]["psi"].abs().values
-        d_phi.append(cohen_d(b_phi, p_phi))
-        d_psi.append(cohen_d(b_psi, p_psi))
-
-    d_phi = np.array(d_phi)
-    d_psi = np.array(d_psi)
-
-    def bar_colors(d_arr, base_win, base_lose):
-        return [base_win if v > 0 else base_lose for v in d_arr]
-
 
     # bottom row: two stacked Cohen d bar charts, one per metric
     ax_phi = fig.add_subplot(gs[1, 0])
@@ -262,35 +188,33 @@ def plot_cohen_d_explanation(samples_path: str, out_path: str) -> None:
             )
 
         ax.axhline(0, color="black", linewidth=0.8, linestyle="--")
-        #for thresh, label in [(0.2, "small"), (0.5, "medium"), (0.8, "large")]:
-        #    ax.axhline( thresh, color=C_ZERO, linewidth=0.6, linestyle=":")
-        #    ax.axhline(-thresh, color=C_ZERO, linewidth=0.6, linestyle=":")
-        #    ax.text(n_sigmas - 0.6, thresh + 0.05, label, fontsize=15, color=C_ZERO)
+
 
         ax.set_xticks(x)
         ax.tick_params(labelsize = 15)
         ax.set_xticklabels([f"{s:.2g}" for s in sigmas], fontsize=15)
         ax.set_xlabel(rf"perturbation $\sigma$", fontsize=15)
-        ax.set_ylabel("Cohen d\n(positive = physics wins)", fontsize=15)
+        ax.set_ylabel("Cohen d", fontsize=15)
         ax.set_title(rf"Cohen d per $\sigma$, {metric_label} dimension", fontsize=15)
         ax.grid(axis="y", alpha=0.3)
 
-        win_patch  = mpatches.Patch(color=C_WIN,  alpha=0.85, label="physics wins (d > 0)")
-        lose_patch = mpatches.Patch(color=C_LOSE, alpha=0.85, label="physics loses (d < 0)")
-        if ax == ax_phi:
-            ax.legend(handles=[win_patch, lose_patch], fontsize=15, loc="upper right")
-        else:
-            ax.legend(handles=[win_patch, lose_patch], fontsize=15, loc="lower right")
+        win_patch  = mpatches.Patch(color=C_WIN,  alpha=0.85)
+        lose_patch = mpatches.Patch(color=C_LOSE, alpha=0.85)
+        #if ax == ax_phi:
+        #    ax.legend(handles=[win_patch, lose_patch], fontsize=15, loc="upper right")
+        #else:
+        #    ax.legend(handles=[win_patch, lose_patch], fontsize=15, loc="lower right")
 
         plt.tight_layout()
-        fig.savefig(out_path, dpi=300, bbox_inches="tight")
+        savefig(fig, f"stage7_{experiment}_cohen_d_explanation.png")
         plt.close(fig)
-        print(f"Saved -> {out_path}")
+        print(f"Saved -> cohen_d_explanation.png")
 
 
 if __name__ == "__main__":
-    #samples_path = os.path.join(config.RESULTS_DIR, "datafiles/perturbation_samples.csv")
-    #out_path     = os.path.join(config.RESULTS_DIR, "cohen_d_explanation.png")
-    samples_path = os.path.join("/home/suchita/ML_projects/projects/Ramchandran_dashboard/results/datafiles/perturbation_samples.csv")
-    out_path     = os.path.join("/home/suchita/ML_projects/projects/Ramchandran_dashboard/results/plots/cohen_d_explanation.png")
-    plot_cohen_d_explanation(samples_path, out_path)
+    samples_path = os.path.join(config.RESULTS_DIR, "datafiles/perturbation_samples.csv")
+    for experiment, (csv_path, gmm_path) in config.EXPERIMENTS.items():
+        print(f'will now analyse experiment = {experiment}')
+        
+        plot_cohen_d_explanation(experiment, samples_path)
+    

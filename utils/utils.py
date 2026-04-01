@@ -59,7 +59,6 @@ def fit_gmm(angles_raw, gmm_path):
     return gmm
 
 # --- Cohen's d ---
-
 def cohen_d(group1, group2):
     n1, n2   = len(group1), len(group2)
     var1     = np.var(group1, ddof=1)

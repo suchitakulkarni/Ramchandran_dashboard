@@ -23,12 +23,24 @@ Lovell SC et al. (2003). Structure validation by Calpha geometry:
 phi, psi and Cbeta deviation. Proteins 50(3):437-450.
 """
 
-import os
+import os, sys
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
 import pyrama
 
+
+from pathlib import Path
+
+if "PROJECT_ROOT" in os.environ:
+    root_path = Path(os.environ["PROJECT_ROOT"]).resolve()
+else:
+    # fallback: assume this file is somewhere inside src/
+    root_path = Path(__file__).resolve().parents[1]
+if str(root_path) not in sys.path:
+    sys.path.insert(0, str(root_path))
+
+import src.config as config
 # --- load grid once at import time ---
 
 _DATA_PATH = os.path.join(
@@ -139,3 +151,10 @@ def compliance_lovell(phi_arr, psi_arr):
     frac_favoured = float((densities >= FAVOURED_THRESHOLD).mean())
     frac_allowed  = float((densities >= ALLOWED_THRESHOLD).mean())
     return frac_favoured, frac_allowed
+
+def compliance_rate(samples_raw, gmm):
+    """
+    Fraction of decoded samples whose GMM log-prob exceeds the threshold.
+    """
+    log_probs = gmm.score_samples(samples_raw)
+    return float((log_probs >= config.GMM_COMPLIANCE_THRESHOLD).mean())

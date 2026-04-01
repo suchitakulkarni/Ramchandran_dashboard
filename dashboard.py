@@ -38,7 +38,9 @@ import src.config as config
 from src.train_vae import VAE
 from src.model import TorchGMM, build_torch_gmm
 from utils.rama_grid import  RamaGrid, build_and_save_rama_grid
-from utils.ramachandran_regions import compliance_lovell
+from utils.ramachandran_regions import compliance_lovell, compliance_rate
+from src.perturbation_analysis import sample_perturbations
+import src.config as config
 
 # ── page config ────────────────────────────────────────────────────────────────
 
@@ -78,12 +80,11 @@ EXPERIMENT = "original"   # augmented results excluded by design decision
 @st.cache_resource
 def load_models_and_artifacts():
     """Load saved models, scalers, GMMs once and cache them."""
-    csv_path, scaler_path, gmm_path = config.EXPERIMENTS[EXPERIMENT]
+    csv_path, gmm_path = config.EXPERIMENTS[EXPERIMENT]
 
-    if not os.path.exists(scaler_path) or not os.path.exists(gmm_path):
+    if not os.path.exists(gmm_path):
         return None
 
-    scaler    = joblib.load(scaler_path)
     gmm       = joblib.load(gmm_path)
     #torch_gmm = build_torch_gmm(gmm)
     torch_gmm = build_and_save_rama_grid(gmm_path)
@@ -97,11 +98,11 @@ def load_models_and_artifacts():
             m.eval()
             models[variant] = m
 
-    return {"scaler": scaler, "gmm": gmm, "torch_gmm": torch_gmm,
+    return {"gmm": gmm, "torch_gmm": torch_gmm,
             "models": models}
 
 
-def run_perturbation(models, scaler, torch_gmm, sigma, n_samples):
+def run_perturbation(models, torch_gmm, sigma, n_samples):
     """
     Perturb around z=0 (prior mean) for each variant.
     Returns a dict with phi, psi arrays and compliance scalars per variant.
@@ -110,31 +111,23 @@ def run_perturbation(models, scaler, torch_gmm, sigma, n_samples):
     z_center = torch.zeros(1, config.LATENT_DIM)
 
     for variant, model in models.items():
-        with torch.no_grad():
-            noise = torch.randn(n_samples, config.LATENT_DIM) * sigma
-            z     = z_center + noise
-            recon = model.decoder(z)   # (n_samples, 2) in [-1, 1]
+        angles = sample_perturbations(model, sigma, n_samples)
+        #with torch.no_grad():
+        #    noise = torch.randn(n_samples, config.LATENT_DIM) * sigma
+        #    z     = z_center + noise
+        #    recon = model.decoder(z)   # (n_samples, 2) in [-1, 1]
 
         # inverse transform to raw angles
-        data_min   = torch.tensor(scaler.data_min_,   dtype=torch.float32)
-        data_range = torch.tensor(scaler.data_range_, dtype=torch.float32)
-        raw = ((recon + 1.0) / 2.0 * data_range + data_min).numpy()
+        #data_min   = torch.tensor(scaler.data_min_,   dtype=torch.float32)
+        #data_range = torch.tensor(scaler.data_range_, dtype=torch.float32)
+        #raw = ((recon + 1.0) / 2.0 * data_range + data_min).numpy()
 
-        phi = raw[:, 0]
-        psi = raw[:, 1]
+        phi = angles[:, 0]
+        psi = angles[:, 1]
 
         # GMM compliance
-        log_prob = torch_gmm.log_prob(recon).numpy()
-        gmm_compliance = float(np.mean(log_prob >= config.GMM_COMPLIANCE_THRESHOLD))
-
-        # Lovell compliance via pyrama if available
-        lovell_favoured = lovell_allowed = None
-        try:
-            lf, la = compliance_lovell(phi, psi)
-            lovell_favoured = float(lf)
-            lovell_allowed  = float(la)
-        except Exception:
-            pass
+        gmm_compliance = compliance_rate(angles, torch_gmm)
+        lovell_favoured, lovell_allowed = compliance_lovell(angles[:, 0], angles[:, 1])
 
         results[variant] = {
             "phi": phi, "psi": psi,
@@ -439,13 +432,10 @@ with tab3:
             with st.spinner("Running perturbation..."):
                 results = run_perturbation(
                     models    = artifacts["models"],
-                    scaler    = artifacts["scaler"],
                     torch_gmm = artifacts["torch_gmm"],
                     sigma     = sigma,
                     n_samples = n_samples,
                 )
-                
-
             # compliance metric cards
             st.markdown('<hr class="section-rule">', unsafe_allow_html=True)
             st.subheader("Compliance Scores")
@@ -456,28 +446,29 @@ with tab3:
                 ("Lovell favoured",   "lovell_favoured"),
                 ("Lovell allowed",    "lovell_allowed"),
             ]
-
-            for i, (label, key) in enumerate(metrics):
-                with cols[i]:
-                    b_val = results["baseline"].get(key)
-                    p_val = results["physics"].get(key)
-                    if b_val is None:
-                        st.markdown(f"**{label}**  \n_not available_")
-                        continue
-                    delta = p_val - b_val
-                    badge = "win-badge" if delta > 0 else ("lose-badge" if delta < -0.01 else "neutral-badge")
-                    st.markdown(f"""
-                    <div>
-                        <div class="metric-label">{label}</div>
-                        <div class="metric-value">{p_val:.2f}</div>
-                        <div style="font-size:0.8rem; color:#666;">
-                            baseline: {b_val:.2f} &nbsp;
-                            <span class="{badge}">
-                                {'+ ' if delta >= 0 else ''}{delta:.2f}
-                            </span>
-                        </div>
-                    </div>
-                    """, unsafe_allow_html=True)
+            #st.write(results["baseline"])
+            #for i, (label, key) in enumerate(metrics):
+            #    with cols[i]:
+            #        b_val = results["baseline"].get(key)
+            #        st.write(b_val)
+            #        p_val = results["physics"].get(key)
+            #        if b_val is None:
+            #            st.markdown(f"**{label}**  \n_not available_")
+            #            continue
+            #        delta = p_val - b_val
+            #        badge = "win-badge" if delta > 0 else ("lose-badge" if delta < -0.01 else "neutral-badge")
+            #        st.markdown(f"""
+            #        <div>
+            #            <div class="metric-label">{label}</div>
+            #            <div class="metric-value">{p_val:.2f}</div>
+            #            <div style="font-size:0.8rem; color:#666;">
+            #                baseline: {b_val:.2f} &nbsp;
+            #                <span class="{badge}">
+            #                    {'+ ' if delta >= 0 else ''}{delta:.2f}
+            ##                </span>
+             #           </div>
+             #       </div>
+             #       """, unsafe_allow_html=True)
 
             # distribution cards for phi and psi
             with cols[3]:
@@ -565,41 +556,41 @@ with tab4:
 
     
         stage1_path = os.path.join(
-            config.RESULTS_DIR, f"plots/cohen_d_explanation.png"
+            config.RESULTS_DIR, f"plots/stage7_original_cohen_d_explanation.png"
         )
         png_or_message(stage1_path)
         st.caption("Training data distribution in Ramachandran space.")
         # ── distributional summary ─────────────────────────────────────────
-        st.subheader("Distributional Metrics (phi, psi)")
-        st.markdown("""
-        Mann-Whitney U test on |phi| and |psi| distributions across perturbation
-        samples. Physics **wins** when it produces tighter (lower absolute angle)
-        distributions -- i.e. it stays closer to the favoured Ramachandran regions.
-        """)
+        #st.subheader("Distributional Metrics (phi, psi)")
+        #st.markdown("""
+        #Mann-Whitney U test on |phi| and |psi| distributions across perturbation
+        #samples. Physics **wins** when it produces tighter (lower absolute angle)
+        #distributions -- i.e. it stays closer to the favoured Ramachandran regions.
+        #""")
 
-        for _, row in df_dist.iterrows():
-            d     = row["mean_cohen_d"]
-            wins  = row["win_rate"]
-            sig   = row["frac_p_lt_0.05"]
-            label = row["metric"]
+        #for _, row in df_dist.iterrows():
+        #    d     = row["mean_cohen_d"]
+        #    wins  = row["win_rate"]
+        #    sig   = row["frac_p_lt_0.05"]
+        #    label = row["metric"]
 
-            eff = (
-                "large" if abs(d) >= 0.8 else
-                "medium" if abs(d) >= 0.5 else
-                "small" if abs(d) >= 0.2 else "negligible"
-            )
-            direction = "lower (physics wins)" if d > 0 else "higher (physics loses)"
-            badge_cls = "win-badge" if wins > 0.5 else "lose-badge"
+        #    eff = (
+        #        "large" if abs(d) >= 0.8 else
+        #        "medium" if abs(d) >= 0.5 else
+        #        "small" if abs(d) >= 0.2 else "negligible"
+        #    )
+        #    direction = "lower (physics wins)" if d > 0 else "higher (physics loses)"
+        #    badge_cls = "win-badge" if wins > 0.5 else "lose-badge"
 
-            with st.container():
-                c1, c2, c3, c4 = st.columns(4)
-                c1.markdown(f"**{label}**")
-                c2.markdown(
-                    f'<span class="{badge_cls}">{wins*100:.0f}% win rate</span>',
-                    unsafe_allow_html=True
-                )
-                c3.markdown(f"Cohen's d = **{d:.3f}** ({eff} effect, {direction})")
-                c4.markdown(f"{sig*100:.0f}% of tests p < 0.05")
+        #    with st.container():
+        #        c1, c2, c3, c4 = st.columns(4)
+        #        c1.markdown(f"**{label}**")
+        #        c2.markdown(
+        #            f'<span class="{badge_cls}">{wins*100:.0f}% win rate</span>',
+        #            unsafe_allow_html=True
+        #        )
+        #        c3.markdown(f"Cohen's d = **{d:.3f}** ({eff} effect, {direction})")
+        #        c4.markdown(f"{sig*100:.0f}% of tests p < 0.05")
 
         st.markdown('<hr class="section-rule">', unsafe_allow_html=True)
 

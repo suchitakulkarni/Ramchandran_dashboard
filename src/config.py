@@ -1,5 +1,6 @@
 import os
 from pathlib import Path
+import time
 
 if "PROJECT_ROOT" in os.environ:
     root_path = Path(os.environ["PROJECT_ROOT"]).resolve()
@@ -95,8 +96,8 @@ KL_WEIGHT  = 0.01
 #PHYSICS_WEIGHT = 0.005 # 0.005
 PHYSICS_WEIGHT = 0.05 # 0.005
 WARMUP_EPOCHS = 200
-SEED = 57456
-#SEED = 4684
+#SEED = 57456
+SEED = int(time.time() * 1000000) % (2**32)
 
 # --- perturbation analysis ---
 PERTURBATION_SIGMAS = [0.01, 0.05, 0.1, 0.2, 0.5, 1.0]
@@ -108,7 +109,7 @@ N_GENERATED_SAMPLES = 500
 EXPERIMENTS = {
     "original":           (CSV_ORIGINAL,            GMM_ORIGINAL),
 #    "original_balanced":  (CSV_ORIGINAL_BALANCED,  GMM_ORIGINAL_BALANCED),
-#    "augmented":          (CSV_AUGMENTED,           GMM_AUGMENTED),
+    "augmented":          (CSV_AUGMENTED,           GMM_AUGMENTED),
 #    "augmented_balanced": (CSV_AUGMENTED_BALANCED, GMM_AUGMENTED_BALANCED),
 }
 

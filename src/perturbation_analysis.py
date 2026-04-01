@@ -30,7 +30,6 @@ import torch
 import joblib
 
 from pathlib import Path
-from pathlib import Path
 
 if "PROJECT_ROOT" in os.environ:
     root_path = Path(os.environ["PROJECT_ROOT"]).resolve()
@@ -42,7 +41,7 @@ if str(root_path) not in sys.path:
 
 import src.config as config
 from src.train_vae import VAE
-from utils.ramachandran_regions import compliance_lovell
+from utils.ramachandran_regions import compliance_lovell, compliance_rate
 from utils.utils import get_angles_from_4d
 
 np.random.seed(config.SEED)
@@ -74,28 +73,52 @@ def load_experiment_artifacts(experiment):
 
 # --- perturbation sampling ---
 
+#ef sample_perturbations(model, sigma, n_samples):
+#   """
+#   Perturb z=0 with Gaussian noise of std=sigma, decode, inverse-transform.
+#   Returns array of shape (n_samples, 2) in raw angle space (degrees).
+#   """
+#   z_center = torch.zeros(1, config.LATENT_DIM)
+#   samples = []
+#   with torch.no_grad():
+#       for _ in range(n_samples):
+#           z_p = z_center + sigma * torch.randn(1, config.LATENT_DIM)
+#           decoded = model.decoder(z_p)
+#           decoded_raw = get_angles_from_4d(decoded).numpy()
+#           samples.append(decoded_raw[0])
+#   return np.array(samples)  # (n_samples, 2)
+
+#def sample_perturbations_from_favoured(model, sigma, n_samples):
 def sample_perturbations(model, sigma, n_samples):
     """
-    Perturb z=0 with Gaussian noise of std=sigma, decode, inverse-transform.
-    Returns array of shape (n_samples, 2) in raw angle space (degrees).
+    Start from encoded training points that are Lovell favoured.
+    Perturb in latent space, decode, return angles.
     """
-    z_center = torch.zeros(1, config.LATENT_DIM)
+    # filter training data to Lovell favoured only
+    #favoured_mask = lovell_checker(training_data)  # returns boolean array
+    #favoured_data = training_data[favoured_mask]
+    #fov_fav, lov_allow = compliance_lovell(phi_recon, psi_recon)
+    favoured_data = [[np.sin(-75*3.14/180),np.cos(-75*3.14/180) ,np.sin(-25*3.14/180), np.cos(-25*3.14/180)]]
+    
+    # encode them to get valid starting z points
+    with torch.no_grad():
+        z_favoured = model.encoder(torch.tensor(favoured_data, dtype=torch.float32))
+        # take mean of posterior, ignore variance
+        z_favoured = z_favoured[0]  # mu only
+    
     samples = []
     with torch.no_grad():
         for _ in range(n_samples):
-            z_p = z_center + sigma * torch.randn(1, config.LATENT_DIM)
+            # pick a random favoured starting point
+            idx = np.random.randint(len(z_favoured))
+            z_start = z_favoured[idx].unsqueeze(0)
+            z_p = z_start + sigma * torch.randn_like(z_start)
             decoded = model.decoder(z_p)
             decoded_raw = get_angles_from_4d(decoded).numpy()
             samples.append(decoded_raw[0])
-    return np.array(samples)  # (n_samples, 2)
+    
+    return np.array(samples)
 
-
-def compliance_rate(samples_raw, gmm):
-    """
-    Fraction of decoded samples whose GMM log-prob exceeds the threshold.
-    """
-    log_probs = gmm.score_samples(samples_raw)
-    return float((log_probs >= config.GMM_COMPLIANCE_THRESHOLD).mean())
 
 
 # --- main ---

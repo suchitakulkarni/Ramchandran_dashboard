@@ -35,7 +35,6 @@ def main():
 
         print(f"\n=== Experiment: {experiment} ===")
         angles, angles_4D = load_data(csv_path)
-        print (angles_4D)
         
         #gmm = fit_gmm(angles_raw, gmm_path)
         #torch_gmm = build_torch_gmm(gmm)
@@ -91,8 +90,12 @@ def main():
         else:
             print("  Stages 5-6: perturbation_samples.csv not found -- run perturbation_analysis.py")
 
+            plot_cohen_d_explanation(experiment, samples_path)
+
     run_stats()
     print("\nAll plots saved to", config.RESULTS_DIR)
+
+    
 
 
 if __name__ == "__main__":
