@@ -1,31 +1,31 @@
 experiment,sigma,metric,baseline_val,physics_val,delta,physics_wins,mwu_stat,p_value,cohen_d,effect_label,note
-original,0.01,gmm_compliance,1.0,1.0,0.0,0,,,,n/a (scalar),scalar -- no significance test
-original,0.01,lovell_favoured,1.0,1.0,0.0,0,,,,n/a (scalar),scalar -- no significance test
-original,0.01,lovell_allowed,1.0,1.0,0.0,0,,,,n/a (scalar),scalar -- no significance test
-original,0.01,phi_abs,74.4372,69.3773,5.0599,1,0.0,0.0,7.6373,large,n=200 per group
-original,0.01,psi_abs,4.8409,30.2826,-25.4417,0,40000.0,0.0,-19.7006,large,n=200 per group
-original,0.05,gmm_compliance,1.0,1.0,0.0,0,,,,n/a (scalar),scalar -- no significance test
-original,0.05,lovell_favoured,1.0,1.0,0.0,0,,,,n/a (scalar),scalar -- no significance test
-original,0.05,lovell_allowed,1.0,1.0,0.0,0,,,,n/a (scalar),scalar -- no significance test
-original,0.05,phi_abs,74.531,69.1535,5.3775,1,4835.0,0.0,1.734,large,n=200 per group
-original,0.05,psi_abs,5.204,30.6714,-25.4674,0,39978.0,0.0,-4.4796,large,n=200 per group
-original,0.1,gmm_compliance,0.985,1.0,0.015,1,,,,n/a (scalar),scalar -- no significance test
-original,0.1,lovell_favoured,0.945,0.995,0.05,1,,,,n/a (scalar),scalar -- no significance test
-original,0.1,lovell_allowed,1.0,1.0,0.0,0,,,,n/a (scalar),scalar -- no significance test
-original,0.1,phi_abs,74.0619,68.8285,5.2333,1,11915.0,0.0,0.6296,medium,n=200 per group
-original,0.1,psi_abs,9.4024,31.8443,-22.442,0,35082.0,0.0,-1.6785,large,n=200 per group
-original,0.2,gmm_compliance,0.92,1.0,0.08,1,,,,n/a (scalar),scalar -- no significance test
-original,0.2,lovell_favoured,0.835,1.0,0.165,1,,,,n/a (scalar),scalar -- no significance test
-original,0.2,lovell_allowed,0.965,1.0,0.035,1,,,,n/a (scalar),scalar -- no significance test
-original,0.2,phi_abs,73.34,70.4188,2.9211,1,18725.0,0.2703,-0.0604,negligible,n=200 per group
-original,0.2,psi_abs,17.0618,32.2073,-15.1455,0,25685.0,0.0,-0.423,small,n=200 per group
-original,0.5,gmm_compliance,0.875,1.0,0.125,1,,,,n/a (scalar),scalar -- no significance test
-original,0.5,lovell_favoured,0.795,0.985,0.19,1,,,,n/a (scalar),scalar -- no significance test
-original,0.5,lovell_allowed,0.895,1.0,0.105,1,,,,n/a (scalar),scalar -- no significance test
-original,0.5,phi_abs,68.0086,65.9013,2.1073,1,22390.0,0.0388,-0.1329,negligible,n=200 per group
-original,0.5,psi_abs,37.6695,40.2079,-2.5385,0,21786.0,0.1225,-0.0209,negligible,n=200 per group
-original,1.0,gmm_compliance,0.835,1.0,0.165,1,,,,n/a (scalar),scalar -- no significance test
-original,1.0,lovell_favoured,0.79,0.98,0.19,1,,,,n/a (scalar),scalar -- no significance test
-original,1.0,lovell_allowed,0.87,1.0,0.13,1,,,,n/a (scalar),scalar -- no significance test
-original,1.0,phi_abs,66.5546,66.6573,-0.1027,0,23367.0,0.0036,-0.2353,small,n=200 per group
-original,1.0,psi_abs,58.8528,41.6111,17.2418,1,17842.0,0.062,0.1098,negligible,n=200 per group
+original,0.01,gmm_compliance,0.02,1.0,0.98,1,,,,n/a (scalar),scalar -- no significance test
+original,0.01,lovell_favoured,0.005,1.0,0.995,1,,,,n/a (scalar),scalar -- no significance test
+original,0.01,lovell_allowed,0.035,1.0,0.965,1,,,,n/a (scalar),scalar -- no significance test
+original,0.01,phi_abs,9.5658,94.8143,-85.2486,0,40000.0,0.0,-12.7249,large,n=200 per group
+original,0.01,psi_abs,132.7746,112.6994,20.0751,1,0.0,0.0,4.6154,large,n=200 per group
+original,0.05,gmm_compliance,0.26,0.98,0.72,1,,,,n/a (scalar),scalar -- no significance test
+original,0.05,lovell_favoured,0.235,0.925,0.69,1,,,,n/a (scalar),scalar -- no significance test
+original,0.05,lovell_allowed,0.295,0.985,0.69,1,,,,n/a (scalar),scalar -- no significance test
+original,0.05,phi_abs,35.657,101.0812,-65.4242,0,36574.0,0.0,-2.2045,large,n=200 per group
+original,0.05,psi_abs,128.1436,111.0327,17.1109,1,9061.0,0.0,0.9892,large,n=200 per group
+original,0.1,gmm_compliance,0.305,0.885,0.58,1,,,,n/a (scalar),scalar -- no significance test
+original,0.1,lovell_favoured,0.235,0.73,0.495,1,,,,n/a (scalar),scalar -- no significance test
+original,0.1,lovell_allowed,0.39,0.915,0.525,1,,,,n/a (scalar),scalar -- no significance test
+original,0.1,phi_abs,53.0048,105.657,-52.6521,0,31835.0,0.0,-1.1733,large,n=200 per group
+original,0.1,psi_abs,120.773,100.2543,20.5187,1,11180.0,0.0,0.7784,medium,n=200 per group
+original,0.2,gmm_compliance,0.29,0.855,0.565,1,,,,n/a (scalar),scalar -- no significance test
+original,0.2,lovell_favoured,0.23,0.78,0.55,1,,,,n/a (scalar),scalar -- no significance test
+original,0.2,lovell_allowed,0.36,0.9,0.54,1,,,,n/a (scalar),scalar -- no significance test
+original,0.2,phi_abs,68.5306,110.0832,-41.5526,0,26982.0,0.0,-0.6364,medium,n=200 per group
+original,0.2,psi_abs,106.2309,94.7026,11.5283,1,15016.0,0.0,0.4702,small,n=200 per group
+original,0.5,gmm_compliance,0.265,0.795,0.53,1,,,,n/a (scalar),scalar -- no significance test
+original,0.5,lovell_favoured,0.18,0.7,0.52,1,,,,n/a (scalar),scalar -- no significance test
+original,0.5,lovell_allowed,0.385,0.855,0.47,1,,,,n/a (scalar),scalar -- no significance test
+original,0.5,phi_abs,84.3227,103.7017,-19.379,0,22827.0,0.0145,-0.2506,small,n=200 per group
+original,0.5,psi_abs,100.8256,70.2985,30.5271,1,16161.0,0.0009,0.3249,small,n=200 per group
+original,1.0,gmm_compliance,0.245,0.715,0.47,1,,,,n/a (scalar),scalar -- no significance test
+original,1.0,lovell_favoured,0.18,0.63,0.45,1,,,,n/a (scalar),scalar -- no significance test
+original,1.0,lovell_allowed,0.33,0.815,0.485,1,,,,n/a (scalar),scalar -- no significance test
+original,1.0,phi_abs,98.808,87.7907,11.0173,1,20224.0,0.8467,-0.0758,negligible,n=200 per group
+original,1.0,psi_abs,88.9909,74.4962,14.4947,1,18339.0,0.1509,0.1367,negligible,n=200 per group

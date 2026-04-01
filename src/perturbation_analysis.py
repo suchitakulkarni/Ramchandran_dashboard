@@ -43,6 +43,7 @@ if str(root_path) not in sys.path:
 import src.config as config
 from src.train_vae import VAE
 from utils.ramachandran_regions import compliance_lovell
+from utils.utils import get_angles_from_4d
 
 np.random.seed(config.SEED)
 torch.manual_seed(config.SEED)
@@ -53,8 +54,7 @@ os.makedirs(config.RESULTS_DIR, exist_ok=True)
 # --- loaders ---
 
 def load_experiment_artifacts(experiment):
-    _, scaler_path, gmm_path = config.EXPERIMENTS[experiment]
-    scaler = joblib.load(scaler_path)
+    _, gmm_path = config.EXPERIMENTS[experiment]
     gmm    = joblib.load(gmm_path)
 
     model_baseline = VAE()
@@ -69,12 +69,12 @@ def load_experiment_artifacts(experiment):
     )
     model_physics.eval()
 
-    return scaler, gmm, model_baseline, model_physics
+    return gmm, model_baseline, model_physics
 
 
 # --- perturbation sampling ---
 
-def sample_perturbations(model, scaler, sigma, n_samples):
+def sample_perturbations(model, sigma, n_samples):
     """
     Perturb z=0 with Gaussian noise of std=sigma, decode, inverse-transform.
     Returns array of shape (n_samples, 2) in raw angle space (degrees).
@@ -84,8 +84,8 @@ def sample_perturbations(model, scaler, sigma, n_samples):
     with torch.no_grad():
         for _ in range(n_samples):
             z_p = z_center + sigma * torch.randn(1, config.LATENT_DIM)
-            decoded = model.decoder(z_p).numpy()
-            decoded_raw = scaler.inverse_transform(decoded)
+            decoded = model.decoder(z_p)
+            decoded_raw = get_angles_from_4d(decoded).numpy()
             samples.append(decoded_raw[0])
     return np.array(samples)  # (n_samples, 2)
 
@@ -105,18 +105,14 @@ def run_perturbation_analysis():
     all_compliance = []
 
     for experiment in config.EXPERIMENTS:
-        _, scaler_path, _ = config.EXPERIMENTS[experiment]
-        if not os.path.exists(scaler_path):
-            print(f"Scaler not found for '{experiment}' -- skipping. Run train_vae.py first.")
-            continue
 
         print(f"\n=== Perturbation analysis: {experiment} ===")
-        scaler, gmm, model_baseline, model_physics = load_experiment_artifacts(experiment)
+        gmm, model_baseline, model_physics = load_experiment_artifacts(experiment)
 
         for model, variant in [(model_baseline, "baseline"), (model_physics, "physics")]:
             for sigma in config.PERTURBATION_SIGMAS:
                 samples = sample_perturbations(
-                    model, scaler, sigma, config.N_PERTURBATIONS
+                    model, sigma, config.N_PERTURBATIONS
                 )
 
                 # long-form rows

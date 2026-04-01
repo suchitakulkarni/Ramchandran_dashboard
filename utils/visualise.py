@@ -40,7 +40,7 @@ if str(root_path) not in sys.path:
 import src.config as config
 from src.train_vae import VAE
 from utils.ramachandran_regions import overlay_regions, compliance_lovell
-from utils.utils import compute_entropy, effect_size_label, cohen_d
+from utils.utils import compute_entropy, effect_size_label, cohen_d, to_4d_torch, get_angles_from_4d
 
 os.makedirs(config.RESULTS_DIR, exist_ok=True)
 os.makedirs(os.path.join(config.RESULTS_DIR,"plots"), exist_ok=True)
@@ -75,8 +75,7 @@ def savefig(fig, filename):
 
 
 def load_experiment_artifacts(experiment):
-    _, scaler_path, gmm_path = config.EXPERIMENTS[experiment]
-    scaler = joblib.load(scaler_path)
+    _, gmm_path = config.EXPERIMENTS[experiment]
     gmm    = joblib.load(gmm_path)
 
     model_baseline = VAE()
@@ -91,11 +90,11 @@ def load_experiment_artifacts(experiment):
     )
     model_physics.eval()
 
-    return scaler, gmm, model_baseline, model_physics
+    return gmm, model_baseline, model_physics
 
 
 def load_experiment_data(experiment):
-    csv_path, _, _ = config.EXPERIMENTS[experiment]
+    csv_path, _ = config.EXPERIMENTS[experiment]
     return pd.read_csv(csv_path)
 
 
@@ -338,11 +337,10 @@ def plot_gmm_quality(experiment, df, gmm):
 # Stage 3 : reconstruction quality
 # =============================================================================
 
-def plot_reconstruction(experiment, df, scaler, model_baseline, model_physics):
-    angles_raw    = df[["phi", "psi"]].values.astype(np.float32)
-    angles_scaled = scaler.transform(angles_raw)
-    x             = torch.tensor(angles_scaled)
-
+def plot_reconstruction(experiment, df, model_baseline, model_physics):
+    angles_raw  = df[["phi", "psi"]].values.astype(np.float32)
+    angles_tensor = torch.from_numpy(angles_raw)
+    angles_4d = to_4d_torch(angles_tensor)
     fig, axes = plt.subplots(2, 3, figsize=(16, 10))
     fig.suptitle(
         f"Reconstruction Quality -- {experiment}", fontsize=13, fontweight="bold"
@@ -353,8 +351,8 @@ def plot_reconstruction(experiment, df, scaler, model_baseline, model_physics):
         (model_physics,  "Physics VAE",  COLORS["physics"]),
     ]):
         with torch.no_grad():
-            recon, _, _ = model(x)
-        recon_raw = scaler.inverse_transform(recon.numpy())
+            recon, _, _ = model(angles_4d)
+        recon_raw = get_angles_from_4d(recon).numpy()
 
         phi_orig  = angles_raw[:, 0]
         psi_orig  = angles_raw[:, 1]
@@ -397,7 +395,7 @@ def plot_reconstruction(experiment, df, scaler, model_baseline, model_physics):
 # Stage 4 : generated samples
 # =============================================================================
 
-def plot_generated_samples(experiment, df, scaler, model_baseline, model_physics,
+def plot_generated_samples(experiment, df, model_baseline, model_physics,
                            n_samples=500):
     phi_orig = df["phi"].values
     psi_orig = df["psi"].values
@@ -422,8 +420,8 @@ def plot_generated_samples(experiment, df, scaler, model_baseline, model_physics
     ]:
         z = torch.randn(n_samples, config.LATENT_DIM)
         with torch.no_grad():
-            generated = model.decoder(z).numpy()
-        generated_raw = scaler.inverse_transform(generated)
+            generated = model.decoder(z)
+        generated_raw = get_angles_from_4d(generated)
 
         ax.scatter(phi_orig, psi_orig, s=4, alpha=0.2, color="grey", label="training")
         ax.scatter(generated_raw[:, 0], generated_raw[:, 1], s=8, alpha=0.5,
@@ -864,17 +862,15 @@ def main():
     df_samples    = pd.read_csv(samples_path)    if os.path.exists(samples_path)    else None
     df_compliance = pd.read_csv(compliance_path) if os.path.exists(compliance_path) else None
 
-    for experiment, (csv_path, scaler_path, gmm_path) in config.EXPERIMENTS.items():
+    for experiment, (csv_path, gmm_path) in config.EXPERIMENTS.items():
         if not os.path.exists(csv_path):
             print(f"CSV not found for '{experiment}' -- skipping")
             continue
-        if not os.path.exists(scaler_path):
-            print(f"Scaler not found for '{experiment}' -- run train_vae.py first")
-            continue
+        
 
         print(f"\n=== Plotting: {experiment} ===")
         df                                            = load_experiment_data(experiment)
-        scaler, gmm, model_baseline, model_physics    = load_experiment_artifacts(experiment)
+        gmm, model_baseline, model_physics    = load_experiment_artifacts(experiment)
 
         print("  Stage 0: learning curves")
         plot_learning_curves(experiment)
@@ -887,10 +883,10 @@ def main():
         plot_gmm_quality(experiment, df, gmm)
 
         print("  Stage 3: reconstruction")
-        plot_reconstruction(experiment, df, scaler, model_baseline, model_physics)
+        plot_reconstruction(experiment, df, model_baseline, model_physics)
 
         print("  Stage 4: generated samples")
-        plot_generated_samples(experiment, df, scaler, model_baseline, model_physics)
+        plot_generated_samples(experiment, df, model_baseline, model_physics)
 
         if df_samples is not None:
             print("  Stage 5: perturbation scatter")

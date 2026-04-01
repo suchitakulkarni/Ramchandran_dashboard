@@ -6,7 +6,7 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader, TensorDataset
 from sklearn.mixture import GaussianMixture
-from sklearn.preprocessing import MinMaxScaler
+
 import joblib
 
 from pathlib import Path
@@ -32,17 +32,16 @@ os.makedirs(config.RESULTS_DIR, exist_ok=True)
 
 # --- training and evaluation ---
 
-def train_epoch(model, loader, optimizer, scaler, torch_gmm, use_physics, current_phys_weight):
+def train_epoch(model, loader, optimizer,  torch_gmm, use_physics, current_phys_weight):
     model.train()
     total_loss, total_recon, total_kl, total_phys = 0.0, 0.0, 0.0, 0.0
     for x_batch, in loader:
         optimizer.zero_grad()
         recon, mu, log_var = model(x_batch)
-        
         base_loss, recon_loss, kl_loss = vae_base_loss(recon, x_batch, mu, log_var)
         
         if use_physics:
-            phys = physics_penalty(recon, scaler, torch_gmm)
+            phys = physics_penalty(recon,  torch_gmm)
             loss = base_loss + current_phys_weight * phys
             total_phys += phys.item()
         else:
@@ -59,7 +58,7 @@ def train_epoch(model, loader, optimizer, scaler, torch_gmm, use_physics, curren
     return total_loss / n, total_recon / n, total_kl / n, total_phys / n
 
 
-def eval_epoch(model, loader, scaler, torch_gmm, use_physics, current_phys_weight):
+def eval_epoch(model, loader, torch_gmm, use_physics, current_phys_weight):
     model.eval()
     total_loss, total_recon, total_kl, total_phys = 0.0, 0.0, 0.0, 0.0
     with torch.no_grad():
@@ -68,7 +67,7 @@ def eval_epoch(model, loader, scaler, torch_gmm, use_physics, current_phys_weigh
             base_loss, recon_loss, kl_loss = vae_base_loss(recon, x_batch, mu, log_var)
             
             if use_physics:
-                phys = physics_penalty(recon, scaler, torch_gmm)
+                phys = physics_penalty(recon,  torch_gmm)
                 loss = base_loss + current_phys_weight * phys
                 total_phys += phys.item()
             else:
@@ -82,22 +81,24 @@ def eval_epoch(model, loader, scaler, torch_gmm, use_physics, current_phys_weigh
     return total_loss / n, total_recon / n, total_kl / n, total_phys / n
 
 
-def run_training(use_physics, angles_scaled, scaler, torch_gmm, save_path, experiment):
+def run_training(use_physics, angles_4D, torch_gmm, save_path, experiment):
     variant = "physics" if use_physics else "baseline"
     print(f"  Training {variant} VAE...")
 
-    n_total = len(angles_scaled)
+    n_total = len(angles_4D)
     n_val = max(1, int(n_total * config.VAL_SPLIT))
     idx = np.random.permutation(n_total)
     val_idx, train_idx = idx[:n_val], idx[n_val:]
 
-    tensor_train = torch.tensor(angles_scaled[train_idx], dtype=torch.float32)
-    tensor_val = torch.tensor(angles_scaled[val_idx], dtype=torch.float32)
+    tensor_train = torch.tensor(angles_4D[train_idx], dtype=torch.float32)
+    tensor_val = torch.tensor(angles_4D[val_idx], dtype=torch.float32)
 
     train_loader = DataLoader(TensorDataset(tensor_train), batch_size=config.BATCH_SIZE, shuffle=True)
     val_loader = DataLoader(TensorDataset(tensor_val), batch_size=config.BATCH_SIZE, shuffle=False)
 
     model = VAE()
+    # 2. Apply the specific bottleneck initialization
+    #model.finalize_bottleneck()
     optimizer = optim.Adam(model.parameters(), lr=config.LR)
     history = []
 
@@ -111,10 +112,10 @@ def run_training(use_physics, angles_scaled, scaler, torch_gmm, save_path, exper
             current_w = 0.0
 
         tr_loss, tr_recon, tr_kl, tr_phys = train_epoch(
-            model, train_loader, optimizer, scaler, torch_gmm, use_physics, current_w
+            model, train_loader, optimizer, torch_gmm, use_physics, current_w
         )
         val_loss, val_recon, val_kl, val_phys = eval_epoch(
-            model, val_loader, scaler, torch_gmm, use_physics, current_w
+            model, val_loader, torch_gmm, use_physics, current_w
         )
 
         history.append({
@@ -138,18 +139,18 @@ def run_training(use_physics, angles_scaled, scaler, torch_gmm, save_path, exper
 
 
 def main():
-    for experiment, (csv_path, scaler_path, gmm_path) in config.EXPERIMENTS.items():
+    for experiment, (csv_path, gmm_path) in config.EXPERIMENTS.items():
         if not os.path.exists(csv_path):
             continue
 
         print(f"\n=== Experiment: {experiment} ===")
-        angles_scaled, scaler, angles_raw = load_data(csv_path, scaler_path)
+        angles, angles_4D = load_data(csv_path)
         #gmm = fit_gmm(angles_raw, gmm_path)
         #torch_gmm = build_torch_gmm(gmm)
         torch_gmm = build_rama_grid()
 
-        run_training(False, angles_scaled, scaler, torch_gmm, config.model_path(experiment, "baseline"), experiment)
-        run_training(True, angles_scaled, scaler, torch_gmm, config.model_path(experiment, "physics"), experiment)
+        run_training(False, angles_4D, torch_gmm, config.model_path(experiment, "baseline"), experiment)
+        run_training(True, angles_4D, torch_gmm, config.model_path(experiment, "physics"), experiment)
 
     print("\nAll experiments done.")
 

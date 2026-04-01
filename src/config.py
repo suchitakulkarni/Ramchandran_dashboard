@@ -13,7 +13,13 @@ PROJECT_ROOT = root_path
 DATA_DIR    = PROJECT_ROOT / "data"
 MODEL_DIR   = PROJECT_ROOT / "models"
 RESULTS_DIR = PROJECT_ROOT / "results"
+os.makedirs(MODEL_DIR, exist_ok=True)
+os.makedirs(RESULTS_DIR, exist_ok=True)
+os.makedirs(os.path.join(RESULTS_DIR, "datafiles"), exist_ok=True)
+os.makedirs(os.path.join(RESULTS_DIR, "plots"), exist_ok=True)
+
 PDB_DIR     = os.path.join(DATA_DIR, "pdb_files")
+
 
 # --- data ---
 ORIGINAL_PDB_IDS  = ["1UBQ", "1VII", "2LZM", "1BRS", "1TIM"]
@@ -75,7 +81,7 @@ GMM_COMPLIANCE_THRESHOLD = -5.0   # GMM log-prob cutoff for "allowed" region
 KT = 5
 
 # --- VAE architecture ---
-LATENT_DIM  = 2
+LATENT_DIM  = 4
 HIDDEN_DIM  = 32
 
 # --- VAE training ---
@@ -89,7 +95,8 @@ KL_WEIGHT  = 0.01
 #PHYSICS_WEIGHT = 0.005 # 0.005
 PHYSICS_WEIGHT = 0.05 # 0.005
 WARMUP_EPOCHS = 200
-SEED = 42
+SEED = 57456
+#SEED = 4684
 
 # --- perturbation analysis ---
 PERTURBATION_SIGMAS = [0.01, 0.05, 0.1, 0.2, 0.5, 1.0]
@@ -99,10 +106,10 @@ N_GENERATED_SAMPLES = 500
 # --- experiment registry ---
 # Maps experiment name to (csv_path, scaler_path, gmm_path)
 EXPERIMENTS = {
-    "original":           (CSV_ORIGINAL,           SCALER_ORIGINAL,           GMM_ORIGINAL),
-    #"original_balanced":  (CSV_ORIGINAL_BALANCED,   SCALER_ORIGINAL_BALANCED,  GMM_ORIGINAL_BALANCED),
-    #"augmented":          (CSV_AUGMENTED,            SCALER_AUGMENTED,          GMM_AUGMENTED),
-    #"augmented_balanced": (CSV_AUGMENTED_BALANCED,   SCALER_AUGMENTED_BALANCED, GMM_AUGMENTED_BALANCED),
+    "original":           (CSV_ORIGINAL,            GMM_ORIGINAL),
+#    "original_balanced":  (CSV_ORIGINAL_BALANCED,  GMM_ORIGINAL_BALANCED),
+#    "augmented":          (CSV_AUGMENTED,           GMM_AUGMENTED),
+#    "augmented_balanced": (CSV_AUGMENTED_BALANCED, GMM_AUGMENTED_BALANCED),
 }
 
 # Model filename convention: models/vae_{experiment}_{variant}.pt

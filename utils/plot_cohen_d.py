@@ -289,6 +289,8 @@ def plot_cohen_d_explanation(samples_path: str, out_path: str) -> None:
 
 
 if __name__ == "__main__":
-    samples_path = os.path.join(config.RESULTS_DIR, "datafiles/perturbation_samples.csv")
-    out_path     = os.path.join(config.RESULTS_DIR, "cohen_d_explanation.png")
+    #samples_path = os.path.join(config.RESULTS_DIR, "datafiles/perturbation_samples.csv")
+    #out_path     = os.path.join(config.RESULTS_DIR, "cohen_d_explanation.png")
+    samples_path = os.path.join("/home/suchita/ML_projects/projects/Ramchandran_dashboard/results/datafiles/perturbation_samples.csv")
+    out_path     = os.path.join("/home/suchita/ML_projects/projects/Ramchandran_dashboard/results/plots/cohen_d_explanation.png")
     plot_cohen_d_explanation(samples_path, out_path)

@@ -1,6 +1,7 @@
 import os, sys
 import warnings
 import pandas as pd
+import numpy as np
 from Bio.PDB import PDBList, PPBuilder, MMCIFParser
 
 from pathlib import Path
@@ -64,7 +65,11 @@ def extract_phi_psi(pdb_ids, pdb_dir):
                     records.append({
                         "pdb_id": pdb_id,
                         "phi": round(phi * (180.0 / 3.141592653589793), 4),
-                        "psi": round(psi * (180.0 / 3.141592653589793), 4)
+                        "psi": round(psi * (180.0 / 3.141592653589793), 4),
+                        "sphi": np.sin(round(phi * (180.0 / 3.141592653589793), 4)),
+                        "cphi": np.cos(round(phi * (180.0 / 3.141592653589793), 4)),
+                        "spsi": np.sin(round(psi * (180.0 / 3.141592653589793), 4)),
+                        "cpsi": np.cos(round(psi * (180.0 / 3.141592653589793), 4))
                     })
 
         print(f"Extracted phi/psi from {pdb_id}: {len(records) - count_before} residues")

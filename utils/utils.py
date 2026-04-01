@@ -19,13 +19,30 @@ os.makedirs(config.RESULTS_DIR, exist_ok=True)
 
 # --- data loading ---
 
-def load_data(csv_path, scaler_path):
+def load_data(csv_path):
     df = pd.read_csv(csv_path)
     angles = df[["phi", "psi"]].values.astype(np.float32)
-    scaler = MinMaxScaler(feature_range=(-1, 1))
-    angles_scaled = scaler.fit_transform(angles)
-    joblib.dump(scaler, scaler_path)
-    return angles_scaled, scaler, angles
+    angles_4D = df[["sphi","cphi", "spsi", "cpsi"]].values.astype(np.float32)
+    #scaler = MinMaxScaler(feature_range=(-1, 1))
+    #angles_scaled = scaler.fit_transform(angles)
+    #joblib.dump(scaler, scaler_path)
+    return angles, angles_4D
+
+def to_4d_torch(angles_deg):
+    rad = angles_deg * (torch.pi / 180.0)
+    # Stack along the feature dimension (dim=1)
+    return torch.stack([
+        torch.sin(rad[:, 0]), torch.cos(rad[:, 0]), # Phi
+        torch.sin(rad[:, 1]), torch.cos(rad[:, 1])  # Psi
+    ], dim=1)
+    
+def get_angles_from_4d(recon_4d):
+    # recon_4d shape: [batch, 4] -> [sin_phi, cos_phi, sin_psi, cos_psi]
+    phi_rad = torch.atan2(recon_4d[:, 0], recon_4d[:, 1])
+    psi_rad = torch.atan2(recon_4d[:, 2], recon_4d[:, 3])
+    
+    # Convert to degrees for your RamaGrid
+    return torch.stack([phi_rad, psi_rad], dim=1) * (180.0 / torch.pi)
 
 
 # --- GMM fitting ---
