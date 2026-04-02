@@ -267,8 +267,7 @@ with tab1:
         $$ 
         \mathcal{L}_{physics}​= \frac{1}{N}\sum clip(−logpTop500​(\phi_i​,\psi_i​), 0, C)
         $$ 
-        
-        $KT$ is a hyperparameter and $C$ is a hyperparameter for gradient clipping 
+        $C$ is a hyperparameter for gradient clipping 
         '''
         st.markdown(
         """
