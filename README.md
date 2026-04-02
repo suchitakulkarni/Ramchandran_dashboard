@@ -8,9 +8,12 @@ enzyme space, using five structurally diverse proteins from the PDB (https://www
 1BRS (Barnase-Barstar), 1TIM (TIM-barrel), 2LZM (T4 lysozyme),
 1UBQ (Ubiquitin), 1VII (Villin headpiece).
 
-We have about 1333 data samples in the training.
+We have about 1333 data samples in the training as the default database and 3335 sample as an agumented database. 
+The augmented dataset is created to address the issue of class imbalance which affects data driven method. 
 
 ---
+![Results of compliance using the default dataset](https://github.com/suchitakulkarni/Ramchandran_dashboard/blob/main/results/plots/stage6_original_entropy_compliance.png)
+Please refer to the results folder for the results of the augmented dataset.
 
 ## Core idea
 
