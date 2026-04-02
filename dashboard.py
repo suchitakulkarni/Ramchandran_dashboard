@@ -446,29 +446,7 @@ with tab3:
                 ("Lovell favoured",   "lovell_favoured"),
                 ("Lovell allowed",    "lovell_allowed"),
             ]
-            #st.write(results["baseline"])
-            #for i, (label, key) in enumerate(metrics):
-            #    with cols[i]:
-            #        b_val = results["baseline"].get(key)
-            #        st.write(b_val)
-            #        p_val = results["physics"].get(key)
-            #        if b_val is None:
-            #            st.markdown(f"**{label}**  \n_not available_")
-            #            continue
-            #        delta = p_val - b_val
-            #        badge = "win-badge" if delta > 0 else ("lose-badge" if delta < -0.01 else "neutral-badge")
-            #        st.markdown(f"""
-            #        <div>
-            #            <div class="metric-label">{label}</div>
-            #            <div class="metric-value">{p_val:.2f}</div>
-            #            <div style="font-size:0.8rem; color:#666;">
-            #                baseline: {b_val:.2f} &nbsp;
-            #                <span class="{badge}">
-            #                    {'+ ' if delta >= 0 else ''}{delta:.2f}
-            ##                </span>
-             #           </div>
-             #       </div>
-             #       """, unsafe_allow_html=True)
+
 
             # distribution cards for phi and psi
             with cols[3]:
@@ -556,41 +534,10 @@ with tab4:
 
     
         stage1_path = os.path.join(
-            config.RESULTS_DIR, f"plots/stage7_original_cohen_d_explanation.png"
+            config.RESULTS_DIR, f"plots/compliance_original.png"
         )
         png_or_message(stage1_path)
-        st.caption("Training data distribution in Ramachandran space.")
-        # ── distributional summary ─────────────────────────────────────────
-        #st.subheader("Distributional Metrics (phi, psi)")
-        #st.markdown("""
-        #Mann-Whitney U test on |phi| and |psi| distributions across perturbation
-        #samples. Physics **wins** when it produces tighter (lower absolute angle)
-        #distributions -- i.e. it stays closer to the favoured Ramachandran regions.
-        #""")
-
-        #for _, row in df_dist.iterrows():
-        #    d     = row["mean_cohen_d"]
-        #    wins  = row["win_rate"]
-        #    sig   = row["frac_p_lt_0.05"]
-        #    label = row["metric"]
-
-        #    eff = (
-        #        "large" if abs(d) >= 0.8 else
-        #        "medium" if abs(d) >= 0.5 else
-        #        "small" if abs(d) >= 0.2 else "negligible"
-        #    )
-        #    direction = "lower (physics wins)" if d > 0 else "higher (physics loses)"
-        #    badge_cls = "win-badge" if wins > 0.5 else "lose-badge"
-
-        #    with st.container():
-        #        c1, c2, c3, c4 = st.columns(4)
-        #        c1.markdown(f"**{label}**")
-        #        c2.markdown(
-        #            f'<span class="{badge_cls}">{wins*100:.0f}% win rate</span>',
-        #            unsafe_allow_html=True
-        #        )
-        #        c3.markdown(f"Cohen's d = **{d:.3f}** ({eff} effect, {direction})")
-        #        c4.markdown(f"{sig*100:.0f}% of tests p < 0.05")
+        st.caption("Compliance figures over five runs")
 
         st.markdown('<hr class="section-rule">', unsafe_allow_html=True)
 
