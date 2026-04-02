@@ -8,7 +8,7 @@ enzyme space, using five structurally diverse proteins from the PDB (https://www
 1BRS (Barnase-Barstar), 1TIM (TIM-barrel), 2LZM (T4 lysozyme),
 1UBQ (Ubiquitin), 1VII (Villin headpiece).
 
-We have about 2000 data samples in the training.
+We have about 1333 data samples in the training.
 
 ---
 
