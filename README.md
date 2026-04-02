@@ -117,7 +117,7 @@ python utils/prepare_data.py
 # 2. train and run models
 python main.py
 
-# 6. launch dashboard
+# 3. launch dashboard
 streamlit run dashboard.py
 ```
 
