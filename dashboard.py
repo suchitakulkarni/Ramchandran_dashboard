@@ -112,15 +112,6 @@ def run_perturbation(models, torch_gmm, sigma, n_samples):
 
     for variant, model in models.items():
         angles = sample_perturbations(model, sigma, n_samples)
-        #with torch.no_grad():
-        #    noise = torch.randn(n_samples, config.LATENT_DIM) * sigma
-        #    z     = z_center + noise
-        #    recon = model.decoder(z)   # (n_samples, 2) in [-1, 1]
-
-        # inverse transform to raw angles
-        #data_min   = torch.tensor(scaler.data_min_,   dtype=torch.float32)
-        #data_range = torch.tensor(scaler.data_range_, dtype=torch.float32)
-        #raw = ((recon + 1.0) / 2.0 * data_range + data_min).numpy()
 
         phi = angles[:, 0]
         psi = angles[:, 1]
@@ -507,7 +498,7 @@ with tab3:
 # ─────────────────────────────────────────────────────────────────────────────
 
 with tab4:
-    st.header("Statistical Summary (from offline results)")
+        st.header("Statistical Summary (from offline results)")
     
         stage1_path = os.path.join(
             config.RESULTS_DIR, f"plots/compliance_original.png"
