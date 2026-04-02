@@ -4,9 +4,11 @@ Comparison of a standard VAE vs a physics-informed VAE for generating protein
 backbone dihedral angles (phi, psi) consistent with Ramachandran constraints.
 
 Built as a demonstration of understanding conformational sampling problems in
-enzyme space, using five structurally diverse proteins from the PDB:
+enzyme space, using five structurally diverse proteins from the PDB (https://www.rcsb.org/):
 1BRS (Barnase-Barstar), 1TIM (TIM-barrel), 2LZM (T4 lysozyme),
 1UBQ (Ubiquitin), 1VII (Villin headpiece).
+
+We have about 2000 data samples in the training.
 
 ---
 
