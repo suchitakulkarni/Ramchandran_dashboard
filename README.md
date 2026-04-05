@@ -114,6 +114,10 @@ N_GENERATED_SAMPLES = 500         # samples for Stage 4 prior sampling
 ## Run order
 
 ```bash
+# 0. set the project folder path in
+initiate_project.sh
+and run
+bash  initiate_project.sh
 # 1. extract dihedral angles from PDB structures
 python utils/prepare_data.py
 
