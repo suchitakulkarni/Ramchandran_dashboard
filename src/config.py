@@ -86,7 +86,7 @@ LATENT_DIM  = 4
 HIDDEN_DIM  = 32
 
 # --- VAE training ---
-EPOCHS     = 2000
+EPOCHS     = 5
 BATCH_SIZE = 64
 LR         = 5e-4
 KL_WEIGHT  = 0.01

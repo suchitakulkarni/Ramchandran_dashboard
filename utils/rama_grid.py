@@ -2,10 +2,9 @@ import torch
 import numpy as np
 from pathlib import Path
 import pyrama
-
+import logging
 import joblib
-
-
+logger = logging.getLogger(__name__)
 
 class RamaGrid:
     """
@@ -21,6 +20,7 @@ class RamaGrid:
     """
 
     def __init__(self, data_file: str | None = None):
+        logger.info("Initiating RamaGrid class")
         grid, phi_coords, psi_coords = self._load_grid(data_file)
 
         # grid shape: (180, 180), axes: phi (rows), psi (cols)
@@ -38,21 +38,22 @@ class RamaGrid:
 
     def _load_grid(self, data_file: str | None):
         if data_file is None:
-            
             pkg_dir = Path(pyrama.__file__).parent
             data_file = pkg_dir / "data" / "pref_general.data"
 
         phi_vals, psi_vals, density_vals = [], [], []
-
-        with open(data_file) as f:
-            for line in f:
-                line = line.strip()
-                if not line or line.startswith("#"):
-                    continue
-                parts = line.split()
-                phi_vals.append(float(parts[0]))
-                psi_vals.append(float(parts[1]))
-                density_vals.append(float(parts[2]))
+        try:
+            with open(data_file) as f:
+                for line in f:
+                    line = line.strip()
+                    if not line or line.startswith("#"):
+                        continue
+                    parts = line.split()
+                    phi_vals.append(float(parts[0]))
+                    psi_vals.append(float(parts[1]))
+                    density_vals.append(float(parts[2]))
+        except: 
+            logger.warning(f"No {pkg_dir}/data/pref_general.data found")
 
         phi_unique = sorted(set(phi_vals))
         psi_unique = sorted(set(psi_vals))
@@ -110,7 +111,7 @@ class RamaGrid:
 
 def save_rama_grid(grid: RamaGrid, grid_path: str) -> RamaGrid:
     joblib.dump(grid, grid_path)
-    print(f"RamaGrid saved -> {grid_path}")
+    logger.info(f"RamaGrid saved -> {grid_path}")
     return grid
 
 def load_rama_grid(grid_path: str) -> RamaGrid:
@@ -123,5 +124,5 @@ def build_rama_grid(data_file: str | None = None) -> RamaGrid:
 def build_and_save_rama_grid(grid_path: str) -> RamaGrid:
     grid = build_rama_grid()
     joblib.dump(grid, grid_path)
-    print(f"RamaGrid built from Top500 -> {grid_path}")
+    logger.info(f"RamaGrid built from Top500 -> {grid_path}")
     return grid

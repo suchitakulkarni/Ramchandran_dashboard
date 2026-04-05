@@ -1,4 +1,4 @@
-import os, sys
+import os, sys, logging
 import numpy as np
 import pandas as pd
 import torch
@@ -11,24 +11,31 @@ import joblib
 
 from pathlib import Path
 
-if "PROJECT_ROOT" in os.environ:
-    root_path = Path(os.environ["PROJECT_ROOT"]).resolve()
-else:
-    # fallback: assume this file is somewhere inside src/
-    root_path = Path(__file__).resolve().parents[1]
-if str(root_path) not in sys.path:
-    sys.path.insert(0, str(root_path))
+try:
+    if "PROJECT_ROOT" in os.environ:
+        root_path = Path(os.environ["PROJECT_ROOT"]).resolve()
+    else:
+        # fallback: assume this file is somewhere inside src/
+        root_path = Path(__file__).resolve().parents[1]
+    if str(root_path) not in sys.path:
+        sys.path.insert(0, str(root_path))
+except: 
+    print("please set the PROJECT_ROOT variable corresponding to the project root directory in the enviornment")
+    sys.exit()
 
 from utils.rama_grid import  RamaGrid, build_rama_grid
 from utils.utils import load_data, fit_gmm
 from src.model import build_torch_gmm, VAE, vae_base_loss, physics_penalty
 import src.config as config
 
+logger = logging.getLogger(__name__)
+
 torch.manual_seed(config.SEED)
 np.random.seed(config.SEED)
 
 os.makedirs(config.MODEL_DIR, exist_ok=True)
 os.makedirs(config.RESULTS_DIR, exist_ok=True)
+
 
 # --- training and evaluation ---
 
@@ -83,12 +90,13 @@ def eval_epoch(model, loader, torch_gmm, use_physics, current_phys_weight):
 
 def run_training(use_physics, angles_4D, torch_gmm, save_path, experiment):
     variant = "physics" if use_physics else "baseline"
-    print(f"  Training {variant} VAE...")
+    logger.info("Training %s VAE for experiment '%s'", variant, experiment)
 
     n_total = len(angles_4D)
     n_val = max(1, int(n_total * config.VAL_SPLIT))
     idx = np.random.permutation(n_total)
     val_idx, train_idx = idx[:n_val], idx[n_val:]
+    logger.info("Dataset: %d train / %d val samples", len(train_idx), len(val_idx))  # after split
 
     tensor_train = torch.tensor(angles_4D[train_idx], dtype=torch.float32)
     tensor_val = torch.tensor(angles_4D[val_idx], dtype=torch.float32)
@@ -126,15 +134,16 @@ def run_training(use_physics, angles_4D, torch_gmm, save_path, experiment):
         })
 
         if epoch % 50 == 0 or epoch == 1:
-            print(
-                f"    Epoch {epoch}/{config.EPOCHS} | "
-                f"val_loss: {val_loss:.4f} | recon: {val_recon:.4f} | "
-                f"phys_raw: {val_phys:.4f} | weight: {current_w:.2f}"
+            logger.info(
+               "Epoch %d/%d | val_loss: %.4f | recon: %.4f | phys_raw: %.4f | weight: %.2f",
+                epoch, config.EPOCHS, val_loss, val_recon, val_phys, current_w
             )
 
     torch.save(model.state_dict(), save_path)
+    logger.info("Model saved to %s", save_path)
     loss_path = os.path.join(config.RESULTS_DIR, f"datafiles/loss_{experiment}_{variant}.csv")
     pd.DataFrame(history).to_csv(loss_path, index=False)
+    logger.info("Loss history saved to %s", loss_path)
     return model
 
 
@@ -143,7 +152,7 @@ def main():
         if not os.path.exists(csv_path):
             continue
 
-        print(f"\n=== Experiment: {experiment} ===")
+        logger.info(f"\n=== Experiment: %s ===", experiment)
         angles, angles_4D = load_data(csv_path)
         #gmm = fit_gmm(angles_raw, gmm_path)
         #torch_gmm = build_torch_gmm(gmm)
@@ -152,7 +161,7 @@ def main():
         run_training(False, angles_4D, torch_gmm, config.model_path(experiment, "baseline"), experiment)
         run_training(True, angles_4D, torch_gmm, config.model_path(experiment, "physics"), experiment)
 
-    print("\nAll experiments done.")
+    logger.info("\nAll experiments done.")
 
 
 if __name__ == "__main__":

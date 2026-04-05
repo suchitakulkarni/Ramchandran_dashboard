@@ -15,7 +15,7 @@ All stages loop over config.EXPERIMENTS.
 Output files are namespaced as  results/stage{N}_{experiment}_{description}.png
 """
 
-import os, sys
+import os, sys, logging
 import numpy as np
 import pandas as pd
 import torch
@@ -44,6 +44,7 @@ from utils.utils import compute_entropy, effect_size_label, cohen_d, to_4d_torch
 
 os.makedirs(config.RESULTS_DIR, exist_ok=True)
 os.makedirs(os.path.join(config.RESULTS_DIR,"plots"), exist_ok=True)
+logger = logging.getLogger(__name__)
 
 # 3. Add the root to sys.path if it's not already there
 
@@ -352,7 +353,9 @@ def plot_reconstruction(experiment, df, model_baseline, model_physics):
     ]):
         with torch.no_grad():
             recon, _, _ = model(angles_4d)
+        logger.debug("to_4d_torch: input shape %s", recon.shape)
         recon_raw = get_angles_from_4d(recon).numpy()
+        logger.debug("to_4d_torch: output shape %s", recon_raw.shape)
 
         phi_orig  = angles_raw[:, 0]
         psi_orig  = angles_raw[:, 1]
@@ -421,8 +424,11 @@ def plot_generated_samples(experiment, df, model_baseline, model_physics,
         z = torch.randn(n_samples, config.LATENT_DIM)
         with torch.no_grad():
             generated = model.decoder(z)
-        generated_raw = get_angles_from_4d(generated)
 
+        logger.debug("to_4d_torch: input shape %s", generated.shape)
+        generated_raw = get_angles_from_4d(generated)
+        logger.debug("to_4d_torch: output shape %s", generated_raw.shape)
+        
         ax.scatter(phi_orig, psi_orig, s=4, alpha=0.2, color="grey", label="training")
         ax.scatter(generated_raw[:, 0], generated_raw[:, 1], s=8, alpha=0.5,
                    color=color, label="generated")
@@ -499,12 +505,12 @@ def plot_entropy_and_compliance(experiment, df_samples, df_compliance):
     Panel 2 : GMM compliance rate vs sigma  (data-dependent)
     Panel 3 : Lovell favoured and allowed rates vs sigma  (data-independent)
     """
-    print(f'plotting for experiment {experiment}')
+    logger.info(f'plotting for experiment {experiment}')
     sub_s = df_samples[df_samples["experiment"] == experiment]
     sub_c = df_compliance[df_compliance["experiment"] == experiment]
 
     if sub_s.empty or sub_c.empty:
-        print(f"  No data found for {experiment} -- skipping stage 6")
+        logger.warning(f"  No data found for {experiment} -- skipping stage 6")
         return
 
     sigmas = sorted(sub_s["sigma"].unique())
@@ -647,7 +653,7 @@ def run_stats():
     compliance_path = os.path.join(config.RESULTS_DIR, "datafiles/perturbation_compliance.csv")
 
     if not os.path.exists(samples_path):
-        print(
+        logger.info(
             "perturbation_samples.csv not found. "
             "Run perturbation_analysis.py first."
         )
@@ -808,31 +814,31 @@ def run_stats():
 
     _compliance_metric_names = {"gmm_compliance", "lovell_favoured", "lovell_allowed"}
 
-    print("=== Per-sigma statistics ===")
-    print(df_detail.to_string(index=False))
+    logger.info("=== Per-sigma statistics ===")
+    logger.info(df_detail.to_string(index=False))
 
-    print("\n=== Summary: distributional metrics (phi_abs, psi_abs) ===")
+    logger.info("\n=== Summary: distributional metrics (phi_abs, psi_abs) ===")
     df_dist = df_summary[~df_summary["metric"].isin(_compliance_metric_names)].copy()
-    print(
+    logger.info(
         df_dist[["experiment", "metric", "win_rate", "mean_cohen_d",
                  "frac_p_lt_0.05", "n_sigmas_tested"]].to_string(index=False)
     )
 
-    print("\n=== Summary: compliance metrics (scalar delta, no significance test) ===")
+    logger.info("\n=== Summary: compliance metrics (scalar delta, no significance test) ===")
     df_comp = df_summary[df_summary["metric"].isin(_compliance_metric_names)].copy()
-    print(
+    logger.info(
         df_comp[["experiment", "metric", "win_rate", "mean_delta",
                  "n_sigmas_tested"]].to_string(index=False)
     )
 
-    print(f"\nSaved -> {detail_path}")
-    print(f"Saved -> {summary_path}")
+    logger.info(f"\nSaved -> {detail_path}")
+    logger.info(f"Saved -> {summary_path}")
 
     # plain-language summary
-    print("\n=== Plain-language summary ===")
+    logger.info("\n=== Plain-language summary ===")
     for _, row in df_summary.iterrows():
         if row["metric"] in _compliance_metric_names:
-            print(
+            logger.info(
                 f"  {row['experiment']} | {row['metric']}: "
                 f"physics wins {row['win_rate']*100:.0f}% of sigma levels, "
                 f"mean delta = {row['mean_delta']:+.4f} "
@@ -840,7 +846,7 @@ def run_stats():
             )
         else:
             direction = "lower" if row["mean_cohen_d"] > 0 else "higher"
-            print(
+            logger.info(
                 f"  {row['experiment']} | {row['metric']}: "
                 f"physics wins {row['win_rate']*100:.0f}% of sigma levels, "
                 f"mean Cohen's d = {row['mean_cohen_d']:.3f} ({effect_size_label(row['mean_cohen_d'])} effect, "
@@ -864,42 +870,42 @@ def main():
 
     for experiment, (csv_path, gmm_path) in config.EXPERIMENTS.items():
         if not os.path.exists(csv_path):
-            print(f"CSV not found for '{experiment}' -- skipping")
+            logger.warning(f"CSV not found for '{experiment}' -- skipping")
             continue
         
 
-        print(f"\n=== Plotting: {experiment} ===")
+        logger.info(f"\n=== Plotting: %s ===", experiment)
         df                                            = load_experiment_data(experiment)
         gmm, model_baseline, model_physics    = load_experiment_artifacts(experiment)
 
-        print("  Stage 0: learning curves")
+        logger.info("  Stage 0: learning curves")
         plot_learning_curves(experiment)
 
-        print("  Stage 1: training data")
+        logger.info("  Stage 1: training data")
         plot_training_data(experiment, df)
         plot_training_data_streamlit(experiment, df)
 
-        print("  Stage 2: GMM quality")
+        logger.info("  Stage 2: GMM quality")
         plot_gmm_quality(experiment, df, gmm)
 
-        print("  Stage 3: reconstruction")
+        logger.info("  Stage 3: reconstruction")
         plot_reconstruction(experiment, df, model_baseline, model_physics)
 
-        print("  Stage 4: generated samples")
+        logger.info("  Stage 4: generated samples")
         plot_generated_samples(experiment, df, model_baseline, model_physics)
 
         if df_samples is not None:
-            print("  Stage 5: perturbation scatter")
+            logger.info("  Stage 5: perturbation scatter")
             plot_perturbation_scatter(experiment, df_samples)
 
             if df_compliance is not None:
-                print("  Stage 6: entropy + compliance")
+                logger.info("  Stage 6: entropy + compliance")
                 plot_entropy_and_compliance(experiment, df_samples, df_compliance)
         else:
-            print("  Stages 5-6: perturbation_samples.csv not found -- run perturbation_analysis.py")
+            logger.info("  Stages 5-6: perturbation_samples.csv not found -- run perturbation_analysis.py")
 
     run_stats()
-    print("\nAll plots saved to", config.RESULTS_DIR)
+    logger.info("\nAll plots saved to", config.RESULTS_DIR)
 
 
 if __name__ == "__main__":

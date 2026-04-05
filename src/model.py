@@ -1,4 +1,4 @@
-import os, sys
+import os, sys, logging
 import numpy as np
 import pandas as pd
 import torch
@@ -20,11 +20,9 @@ import src.config as config
 from utils.rama_grid import  RamaGrid, build_rama_grid
 from utils.utils import get_angles_from_4d
 
+logger = logging.getLogger(__name__)
 torch.manual_seed(config.SEED)
 np.random.seed(config.SEED)
-
-os.makedirs(config.MODEL_DIR, exist_ok=True)
-os.makedirs(config.RESULTS_DIR, exist_ok=True)
 
 
 # --- loss functions (Decoupled) ---
@@ -69,7 +67,10 @@ def vae_base_loss(recon_4d, target_4d, mu, log_var):
 
 def physics_penalty(recon_4d: torch.Tensor, torch_gmm) -> torch.Tensor:
     
+    logger.debug(f"to_4d_torch: input shape {recon_4d.shape}" )
     angles_2d =  get_angles_from_4d(recon_4d)
+    logger.debug(f"to_4d_torch: output shape {angles_2d.shape}")
+    
     log_prob = torch_gmm.log_prob(angles_2d)
     # Using a soft clamp or high ceil to ensure gradients don't zero out completely
     penalty = torch.clamp(-log_prob, min=0.0, max=config.PHYSICS_LOG_PROB_CEIL)
@@ -143,6 +144,7 @@ class Decoder(nn.Module):
 
 class VAE(nn.Module):
     def __init__(self):
+        logger.info("initiating VAE class")
         super().__init__()
         self.encoder = Encoder()
         self.decoder = Decoder()

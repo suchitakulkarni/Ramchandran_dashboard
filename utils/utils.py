@@ -1,4 +1,5 @@
 import os
+import logging
 import numpy as np
 import pandas as pd
 import torch
@@ -9,6 +10,7 @@ from scipy.stats import mannwhitneyu
 import joblib
 
 import src.config as config
+logger = logging.getLogger(__name__)
 
 torch.manual_seed(config.SEED)
 np.random.seed(config.SEED)
@@ -16,16 +18,29 @@ np.random.seed(config.SEED)
 os.makedirs(config.MODEL_DIR, exist_ok=True)
 os.makedirs(config.RESULTS_DIR, exist_ok=True)
 
+def setup_logging(level=logging.INFO):
+    """
+    Call once from main.py. All modules use logging.getLogger(__name__)
+    and inherit this configuration automatically.
+    """
+    logging.basicConfig(
+        level=level,
+        format="%(asctime)s | %(levelname)-8s | %(name)s | %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S",
+        handlers=[
+            logging.StreamHandler(),
+            logging.FileHandler(os.path.join(config.RESULTS_DIR, "run.log"), mode="w")
+        ]
+    )
 
 # --- data loading ---
-
 def load_data(csv_path):
+    logger.info(f"loading data from {csv_path}")
     df = pd.read_csv(csv_path)
+    for colname in ["phi", "psi", "sphi","cphi", "spsi", "cpsi"]:
+        if colname not in df.columns: logging.error(f"column {colname} does not exist in the datafile")
     angles = df[["phi", "psi"]].values.astype(np.float32)
     angles_4D = df[["sphi","cphi", "spsi", "cpsi"]].values.astype(np.float32)
-    #scaler = MinMaxScaler(feature_range=(-1, 1))
-    #angles_scaled = scaler.fit_transform(angles)
-    #joblib.dump(scaler, scaler_path)
     return angles, angles_4D
 
 def to_4d_torch(angles_deg):
@@ -48,6 +63,7 @@ def get_angles_from_4d(recon_4d):
 # --- GMM fitting ---
 
 def fit_gmm(angles_raw, gmm_path):
+    logger.info(f"fitting gmm now using compnents {config.N_GMM_COMPONENTS} with covariance type full and seed {config.SEED}")
     gmm = GaussianMixture(
         n_components=config.N_GMM_COMPONENTS,
         covariance_type="full",
@@ -55,7 +71,7 @@ def fit_gmm(angles_raw, gmm_path):
     )
     gmm.fit(angles_raw)
     joblib.dump(gmm, gmm_path)
-    print(f"GMM fitted with {config.N_GMM_COMPONENTS} components -> {gmm_path}")
+    logger.info(f"GMM fitted with {config.N_GMM_COMPONENTS} components -> {gmm_path}")
     return gmm
 
 # --- Cohen's d ---
